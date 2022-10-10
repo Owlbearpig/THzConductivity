@@ -12,7 +12,7 @@ class Measurement:
         self.meas_type = None
         self.sample_name = None
         self.position = [None, None]
-        self.data = None
+        self._data = None
 
         self.post_process_config = post_process_config
 
@@ -47,12 +47,12 @@ class Measurement:
         self.position = [x, y]
 
     def get_data_td(self):
-        if self.data is None:
-            self.data = np.loadtxt(self.filepath)
+        if self._data is None:
+            self._data = np.loadtxt(self.filepath)
         if self.post_process_config["sub_offset"]:
-            self.data[:, 1] -= np.mean(self.data[:20, 1])
+            self._data[:, 1] -= np.mean(self._data[:10, 1])
 
-        return self.data
+        return self._data
 
     def get_data_fd(self):
         data_td = self.get_data_td()
