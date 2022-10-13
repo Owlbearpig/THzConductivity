@@ -1,4 +1,4 @@
-from measurements import get_measurements
+from measurements import get_all_measurements
 import numpy as np
 from numpy import array
 
@@ -25,7 +25,7 @@ class MeasurementSet:
 
 
 def get_measurement_sets():
-    measurements = get_measurements()
+    measurements = get_all_measurements()
     # unique measurement sets (files with same folder above)
     values = set(map(lambda measurement: measurement.dir_1above, measurements))
 

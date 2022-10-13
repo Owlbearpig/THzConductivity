@@ -1,12 +1,12 @@
-from Measurements.measurements import get_measurements
+from Measurements.measurements import get_all_measurements
 import matplotlib.pyplot as plt
 import numpy as np
 from functions import do_fft
 
-measurements = get_measurements()
+measurements = get_all_measurements()
 
 keywords = ["GaAs", "Wafer", "01"]
-keywords = ["InP Wafer 5"]
+#keywords = ["InP Wafer 5"]
 
 selected_measurements = []
 for measurement in measurements:
