@@ -10,7 +10,6 @@ keywords = ["GaAs", "Wafer", "01"]
 
 selected_measurements = []
 for measurement in measurements:
-    #print(measurement)
     if all([s in str(measurement.filepath) for s in keywords]):
         selected_measurements.append(measurement)
         print(measurement)

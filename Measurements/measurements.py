@@ -6,14 +6,8 @@ from functions import windowing
 
 
 class Measurement:
-    def __init__(self, data=None, meas_type=None, filepath=None, post_process_config=None):
-        if data is not None:
-            self._data_td, self._data_fd = data, None
-        else:
-            self._data_td, self._data_fd = None, None
-
+    def __init__(self, data_td=None, meas_type=None, filepath=None, post_process_config=None):
         self.filepath = filepath
-
         self.meas_time = None
         self.meas_type = None
         self.sample_name = None
@@ -23,13 +17,15 @@ class Measurement:
             from consts import post_process_config
 
         self.post_process_config = post_process_config
+        self._data_fd, self._data_td = None, data_td
+        self.pre_process_done = False
 
-        self.set_metadata(meas_type)
+        self._set_metadata(meas_type)
 
     def __repr__(self):
         return str(self.filepath)
 
-    def set_metadata(self, meas_type=None):
+    def _set_metadata(self, meas_type=None):
         if meas_type is not None:
             self.meas_type = meas_type
             return
@@ -59,13 +55,22 @@ class Measurement:
         y = float(str_splits[-1].split(" mm")[0])
         self.position = [x, y]
 
-    def get_data_td(self):
-        if self._data_td is None:
-            self._data_td = np.loadtxt(self.filepath)
+    def do_preprocess(self, force=False):
+        if self.pre_process_done and not force:
+            return
+
         if self.post_process_config["sub_offset"]:
             self._data_td[:, 1] -= np.mean(self._data_td[:10, 1])
         if self.post_process_config["en_windowing"]:
-            self._data_td[:, 1] = windowing(self._data_td[:, 1])
+            self._data_td = windowing(self._data_td)
+
+        self.pre_process_done = True
+
+    def get_data_td(self):
+        if self._data_td is None:
+            self._data_td = np.loadtxt(self.filepath)
+
+        self.do_preprocess()
 
         return self._data_td
 
@@ -110,4 +115,3 @@ def avg_data(measurements):
         y_arrays.append(data_td[:, 1])
 
     return np.array([t, np.mean(y_arrays, axis=0)]).T
-

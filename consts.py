@@ -13,4 +13,4 @@ if os.name == "posix":
 else:
     data_dir = Path("E:\measurementdata\THz Conductivity")
 
-post_process_config = {"sub_offset": True, "en_windowing": True}
+post_process_config = {"sub_offset": True, "en_windowing": False}

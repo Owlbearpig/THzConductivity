@@ -3,7 +3,6 @@ from functions import phase_correction
 from Measurements.measurements import Measurement, get_all_measurements, avg_data
 from helpers import select_measurements
 
-
 def ri_approx(ref_data_fd, sam_data_fd, thickness):
     omega = 2 * pi * ref_data_fd[:, 0] * THz
 
@@ -18,17 +17,21 @@ def ri_approx(ref_data_fd, sam_data_fd, thickness):
 
 
 def main():
+    pp_config = {"sub_offset": True, "en_windowing": True}
+
     all_measurements = get_all_measurements()
-    keywords = ["GaAs", "Wafer", "25", "2021_08_24"]
-    sam_thickess = 500 * um
+    # keywords = ["GaAs", "Wafer", "25", "2021_08_24"]
+    # sam_thickess = 500 * um
+    keywords = ["InP 5", "2021_10_27"]
+    sam_thickess = 380 * um
 
     selected_measurements = select_measurements(all_measurements, keywords)
 
     refs = [measurement for measurement in selected_measurements if measurement.meas_type == "ref"]
     sams = [measurement for measurement in selected_measurements if measurement.meas_type == "sam"]
 
-    avg_ref = Measurement(data=avg_data(refs), meas_type="ref")
-    avg_sam = Measurement(data=avg_data(sams), meas_type="sam")
+    avg_ref = Measurement(data_td=avg_data(refs), meas_type="ref", post_process_config=pp_config)
+    avg_sam = Measurement(data_td=avg_data(sams), meas_type="sam", post_process_config=pp_config)
 
     avg_ref_data_td, avg_sam_data_td = avg_ref.get_data_td(), avg_sam.get_data_td()
     avg_ref_data_fd, avg_sam_data_fd = avg_ref.get_data_fd(), avg_sam.get_data_fd()
