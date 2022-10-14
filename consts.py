@@ -12,5 +12,3 @@ if os.name == "posix":
     data_dir = Path("/home/alex/Data/THzConductivity/MarielenaData")
 else:
     data_dir = Path("E:\measurementdata\THz Conductivity")
-
-post_process_config = {"sub_offset": True, "en_windowing": False}

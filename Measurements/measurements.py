@@ -14,7 +14,7 @@ class Measurement:
         self.position = [None, None]
 
         if post_process_config is None:
-            from consts import post_process_config
+            from imports import post_process_config
 
         self.post_process_config = post_process_config
         self._data_fd, self._data_td = None, data_td
@@ -74,11 +74,15 @@ class Measurement:
 
         return self._data_td
 
-    def get_data_fd(self, pos_freqs_only=True):
+    def get_data_fd(self, pos_freqs_only=True, reversed_time=False):
         if self._data_fd is not None:
             return self._data_fd
         data_td = self.get_data_td()
         t, y = data_td[:, 0], data_td[:, 1]
+
+        if reversed_time:
+            y = np.flip(y)
+
         dt = float(np.mean(np.diff(t)))
         freqs, data_fd = fftfreq(n=len(t), d=dt), fft(y)
 

@@ -1,17 +1,26 @@
-import matplotlib.pyplot as plt
-import numpy as np
 from imports import *
-from numpy.fft import fft, fftfreq
+from numpy.fft import fft, ifft, fftfreq
 from scipy import signal
+from tmm import coh_tmm
 
 
-def do_fft(t, y):
+def do_fft(t, y_td, pos_freqs_only=True):
     dt = float(np.mean(np.diff(t)))
-    freqs, data_fd = fftfreq(n=len(t), d=dt), fft(y)
+    freqs, data_fd = fftfreq(n=len(t), d=dt), fft(y_td)
 
-    pos_slice = freqs >= 0
+    if pos_freqs_only:
+        post_freq_slice = freqs >= 0
+        return freqs[post_freq_slice], data_fd[post_freq_slice]
+    else:
+        return freqs, data_fd
 
-    return freqs[pos_slice], data_fd[pos_slice]
+
+def do_ifft(freqs, y_fd):
+    y_td = ifft(y_fd)
+    t = np.arange(len(y_td)) / freqs.max()
+    t += 1650
+
+    return t, y_td
 
 
 def phase_correction(data_fd, fit_range=None):
@@ -26,13 +35,14 @@ def phase_correction(data_fd, fit_range=None):
 
     phase_corrected = phase_unwrapped - p[1].real
 
-    plt.figure()
-    plt.plot(data_fd[:, 0], phase_unwrapped, label="Unwrapped phase")
-    plt.plot(data_fd[:, 0], phase_corrected, label="Shifted phase")
-    plt.plot(data_fd[:, 0], data_fd[:, 0] * p[0].real, label="Lin. fit (slope*freq)")
-    plt.xlabel("Frequency (THz)")
-    plt.ylabel("Phase (rad)")
-    plt.legend()
+    if verbose:
+        plt.figure()
+        plt.plot(data_fd[:, 0], phase_unwrapped, label="Unwrapped phase")
+        plt.plot(data_fd[:, 0], phase_corrected, label="Shifted phase")
+        plt.plot(data_fd[:, 0], data_fd[:, 0] * p[0].real, label="Lin. fit (slope*freq)")
+        plt.xlabel("Frequency (THz)")
+        plt.ylabel("Phase (rad)")
+        plt.legend()
 
     return phase_corrected
 
@@ -53,13 +63,28 @@ def windowing(data_td):
 
     data_td_windowed = data_td.copy()
     data_td_windowed[:, 1] *= window
+    # data_td_windowed[900:, 1] = data_td_windowed[900:, 1] * 0
 
-    plt.figure()
-    plt.plot(data_td[:, 0], data_td[:, 1], label="Data w/o window")
-    plt.plot(data_td_windowed[:, 0], data_td_windowed[:, 1], label="Data with window")
-    plt.plot(data_td[:, 0], window * max(data_td[:, 1]), label="window * max(y)")
-    plt.xlabel("Time (ps)")
-    plt.ylabel("Amplitude (a.u.)")
-    plt.legend()
+    if verbose:
+        plt.figure()
+        plt.plot(data_td[:, 0], data_td[:, 1], label="Data w/o window")
+        plt.plot(data_td_windowed[:, 0], data_td_windowed[:, 1], label="Data with window")
+        plt.plot(data_td[:, 0], window * max(data_td[:, 1]), label="window * max(y)")
+        plt.xlabel("Time (ps)")
+        plt.ylabel("Amplitude (a.u.)")
+        plt.legend()
 
     return data_td_windowed
+
+def tmm_package_wrapper(freqs, d_list, n):
+    # freq should be in THz ("between 0 and 10 THz"), d in um, n freq. resolved
+    lam = (c0 / freqs) * 10 ** -6  # wl in um
+
+
+    t_list = []
+    for i, lambda_vac in enumerate(lam):
+        n_list = [1, n[i], 1]
+        t_list.append(coh_tmm("s", n_list, d_list, 0, lambda_vac)["t"])
+    t_list = array(t_list)
+
+    return t_list
