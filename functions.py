@@ -1,7 +1,8 @@
+import numpy as np
+
 from imports import *
 from numpy.fft import fft, ifft, fftfreq
 from scipy import signal
-from tmm import coh_tmm
 
 
 def do_fft(t, y_td, pos_freqs_only=True):
@@ -15,31 +16,47 @@ def do_fft(t, y_td, pos_freqs_only=True):
         return freqs, data_fd
 
 
-def do_ifft(freqs, y_fd):
+def do_ifft(data_fd, hermitian=False):
+    freqs, y_fd = data_fd[:, 0], data_fd[:, 1]
+
+    y_fd = nan_to_num(y_fd)
+
+    if hermitian:
+        y_fd = np.concatenate((y_fd, np.flip(np.conj(y_fd[1:]))))
+
     y_td = ifft(y_fd)
-    t = np.arange(len(y_td)) / freqs.max()
+    t = np.arange(len(y_td)) / (2*freqs.max())
     t += 1650
 
-    return t, y_td
+    y_td = np.flip(y_td)
+
+    return array([t, y_td]).T
 
 
-def phase_correction(data_fd, fit_range=None):
+def phase_correction(data_fd, freqs=None, fit_range=None):
+    data_fd[:, 1] = nan_to_num(data_fd[:, 1])
+
     if fit_range is None:
         fit_range = [0.25, 0.5]
 
-    phase = np.angle(data_fd[:, 1])
+    if len(data_fd.shape) == 2:
+        freqs = data_fd[:, 0]
+        phase = np.angle(data_fd[:, 1])
+    else:
+        phase = np.angle(data_fd)
+
     phase_unwrapped = np.unwrap(phase)
 
-    fit_slice = (data_fd[:, 0] >= fit_range[0]) * (data_fd[:, 0] <= fit_range[1])
-    p = np.polyfit(data_fd[fit_slice, 0], phase_unwrapped[fit_slice], 1)
+    fit_slice = (freqs >= fit_range[0]) * (freqs <= fit_range[1])
+    p = np.polyfit(freqs[fit_slice], phase_unwrapped[fit_slice], 1)
 
     phase_corrected = phase_unwrapped - p[1].real
 
     if verbose:
         plt.figure()
-        plt.plot(data_fd[:, 0], phase_unwrapped, label="Unwrapped phase")
-        plt.plot(data_fd[:, 0], phase_corrected, label="Shifted phase")
-        plt.plot(data_fd[:, 0], data_fd[:, 0] * p[0].real, label="Lin. fit (slope*freq)")
+        plt.plot(freqs, phase_unwrapped, label="Unwrapped phase")
+        plt.plot(freqs, phase_corrected, label="Shifted phase")
+        plt.plot(freqs, freqs * p[0].real, label="Lin. fit (slope*freq)")
         plt.xlabel("Frequency (THz)")
         plt.ylabel("Phase (rad)")
         plt.legend()
@@ -76,15 +93,11 @@ def windowing(data_td):
 
     return data_td_windowed
 
-def tmm_package_wrapper(freqs, d_list, n):
-    # freq should be in THz ("between 0 and 10 THz"), d in um, n freq. resolved
-    lam = (c0 / freqs) * 10 ** -6  # wl in um
 
 
-    t_list = []
-    for i, lambda_vac in enumerate(lam):
-        n_list = [1, n[i], 1]
-        t_list.append(coh_tmm("s", n_list, d_list, 0, lambda_vac)["t"])
-    t_list = array(t_list)
+def calc_absorption(freqs, k):
+    # Assuming freqs in range (0, 10 THz), returns a in units of 1/cm (1/m * 1/100)
+    omega = 2 * pi * freqs * THz
+    a = (2 * omega * k) / c0
 
-    return t_list
+    return a / 100

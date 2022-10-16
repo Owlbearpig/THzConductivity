@@ -1,7 +1,7 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy import array, linspace, inf, nan_to_num
+from numpy import array, linspace, inf, nan_to_num, sum
 from consts import THz, c0, pi, um
 
 #print(mpl.rcParams.keys())
@@ -17,6 +17,7 @@ mpl.rcParams['ytick.direction'] = 'in'
 mpl.rcParams['axes.grid'] = True
 # plt.style.use(['dark_background'])
 # plt.xkcd()
+
 mpl.rcParams.update({'font.size': 22})
 
 post_process_config = {"sub_offset": True, "en_windowing": False}

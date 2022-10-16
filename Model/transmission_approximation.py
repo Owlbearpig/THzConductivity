@@ -1,43 +1,41 @@
+import matplotlib.pyplot as plt
+
 from imports import *
-from functions import phase_correction
-from Measurements.measurements import Measurement, get_all_measurements, avg_data
-from helpers import select_measurements
+from functions import phase_correction, calc_absorption
+from Measurements.measurements import get_avg_measurement
 
 
 def ri_approx(ref_data_fd, sam_data_fd, thickness):
-    omega = 2 * pi * ref_data_fd[:, 0] * THz
+    # thickness in m, freq in THz
+    freqs = ref_data_fd[:, 0]
+    omega = 2 * pi * freqs * THz
 
-    corrected_ref_phase = phase_correction(ref_data_fd)
-    corrected_sam_phase = phase_correction(sam_data_fd)
+    fit_range = [0.25, 0.5]
+    corrected_ref_phase = phase_correction(ref_data_fd, fit_range=fit_range)
+    corrected_sam_phase = phase_correction(sam_data_fd, fit_range=fit_range)
 
     phase_diff = corrected_ref_phase - corrected_sam_phase
+    if any(phase_diff[(fit_range[0] < freqs)*(freqs < fit_range[1])] < 0):
+        phase_diff = -1 * phase_diff
 
-    n = 1 + phase_diff * c0 / (thickness * omega)
+    n = (1 + phase_diff * c0 / (thickness * omega)).real
 
     t_func = sam_data_fd[:, 1] / ref_data_fd[:, 1]
 
     k = - c0 * np.log(np.abs(t_func) * (n + 1) ** 2 / (4 * n)) / (omega * thickness)
-    a = (2 * omega * k) / c0
 
-    return n, a / 100, k
+    return n.real + 1j*k.real
 
 
 def main():
-    pp_config = {"sub_offset": True, "en_windowing": True}
-    all_measurements = get_all_measurements()
     keywords = ["GaAs", "Wafer", "25", "2021_08_24"]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
     sam_thickess = 500 * um
     # keywords = ["InP 5", "2021_10_27"]
     # sam_thickess = 380 * um
 
-    selected_measurements = select_measurements(all_measurements, keywords)
-
-    refs = [measurement for measurement in selected_measurements if measurement.meas_type == "ref"]
-    sams = [measurement for measurement in selected_measurements if measurement.meas_type == "sam"]
-
-    avg_ref = Measurement(data_td=avg_data(refs), meas_type="ref", post_process_config=pp_config)
-    avg_sam = Measurement(data_td=avg_data(sams), meas_type="sam", post_process_config=pp_config)
+    pp_config = {"sub_offset": True, "en_windowing": True}
+    avg_ref, avg_sam = get_avg_measurement(keywords, pp_config=pp_config)
 
     avg_ref_data_td, avg_sam_data_td = avg_ref.get_data_td(), avg_sam.get_data_td()
     avg_ref_data_fd, avg_sam_data_fd = avg_ref.get_data_fd(), avg_sam.get_data_fd()
@@ -57,11 +55,19 @@ def main():
     n, a, k = ri_approx(avg_ref_data_fd, avg_sam_data_fd, sam_thickess)
 
     plt.figure()
+    plt.title("Extinction coefficient")
+    plt.plot(freqs[(freqs > 0.00) * (freqs < 3.00)], k[(freqs > 0.00) * (freqs < 3.00)])
+    plt.xlabel("Frequency (THz)")
+    plt.ylabel("Extinction coefficient")
+
+    plt.figure()
+    plt.title("Refractive index")
     plt.plot(freqs[(freqs > 0.25) * (freqs < 3.00)], n[(freqs > 0.25) * (freqs < 3.00)])
     plt.xlabel("Frequency (THz)")
     plt.ylabel("Refractive index")
 
     plt.figure()
+    plt.title("Absorption coefficient")
     plt.plot(freqs[(freqs > 0.25) * (freqs < 3.00)], a[(freqs > 0.25) * (freqs < 3.00)])
     plt.xlabel("Frequency (THz)")
     plt.ylabel("Absorption coefficient (1/cm)")
@@ -70,6 +76,7 @@ def main():
     np.save("n_" + "_".join(keywords), n)
     np.save("a_" + "_".join(keywords), a)
     np.save("k_" + "_".join(keywords), k)
+
 
 if __name__ == '__main__':
     main()

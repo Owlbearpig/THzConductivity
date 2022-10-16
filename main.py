@@ -1,8 +1,6 @@
-from Measurements.measurements import get_all_measurements
-import matplotlib.pyplot as plt
-import numpy as np
+from Measurements.measurements import get_all_measurements, select_measurements
+from imports import *
 from functions import do_fft, do_ifft
-from helpers import select_measurements
 
 
 def main():
@@ -30,10 +28,10 @@ def main():
 
     t_func = Y_avg_sam / Y_avg_ref
 
-    t_ifft, y_td = do_ifft(freqs, np.abs(Y_single))
+    td_single = do_ifft(freqs, np.abs(Y_single))
 
     plt.figure()
-    plt.plot(t_ifft, y_td, label="ifft")
+    plt.plot(td_single[:, 0], td_single[:, 1], label="ifft")
     plt.legend()
 
     plt.figure()

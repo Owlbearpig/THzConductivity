@@ -119,3 +119,57 @@ def avg_data(measurements):
         y_arrays.append(data_td[:, 1])
 
     return np.array([t, np.mean(y_arrays, axis=0)]).T
+
+
+def select_measurements(path_list, keywords=None, case_sensitive=True):
+    if keywords is None:
+        return path_list
+
+    if not case_sensitive:
+        keywords = [keyword.lower() for keyword in keywords]
+        path_list = [str(path).lower() for path in path_list]
+
+    ret = []
+    for filepath in path_list:
+        if all([keyword in str(filepath) for keyword in keywords]):
+            ret.append(filepath)
+
+    ref_cnt, sam_cnt = 0, 0
+    for selected_path in ret:
+        if "sam" in str(selected_path).lower():
+            sam_cnt += 1
+        elif "ref" in str(selected_path).lower():
+            ref_cnt += 1
+    print(f"Number of reference and sample measurements in selection: {ref_cnt}, {sam_cnt}")
+
+    ret.sort(key=lambda x: x.meas_time)
+
+    print("Time between first and last measurement: ", ret[-1].meas_time - ret[0].meas_time)
+
+    return ret
+
+
+def get_avg_measurement(keywords=("GaAs", "Wafer", "25", "2021_08_24"), pp_config=None):
+    measurements = get_all_measurements()
+
+    selected_measurements = select_measurements(measurements, keywords)
+
+    sams = [x for x in selected_measurements if x.meas_type == "sam"]
+    refs = [x for x in selected_measurements if x.meas_type == "ref"]
+
+    avg_ref = Measurement(data_td=avg_data(refs), meas_type="ref", post_process_config=pp_config)
+    avg_sam = Measurement(data_td=avg_data(sams), meas_type="sam", post_process_config=pp_config)
+
+    return avg_ref, avg_sam
+
+
+if __name__ == '__main__':
+    keywords = ["01 GaAs Wafer 25", "2022_02_14"]
+
+    pp_config = {"sub_offset": True, "en_windowing": False}
+    avg_ref, avg_sam = get_avg_measurement(keywords, pp_config=pp_config)
+
+    ref_data_td, sam_data_td = avg_ref.get_data_td(), avg_sam.get_data_td()
+
+    ref_fd = avg_ref.get_data_fd(reversed_time=True)
+    sam_fd = avg_sam.get_data_fd(reversed_time=True)
