@@ -25,7 +25,7 @@ def do_ifft(data_fd, hermitian=False):
         y_fd = np.concatenate((y_fd, np.flip(np.conj(y_fd[1:]))))
 
     y_td = ifft(y_fd)
-    t = np.arange(len(y_td)) / (2*freqs.max())
+    t = np.arange(len(y_td)) / (1*freqs.max())
     t += 1650
 
     y_td = np.flip(y_td)
@@ -37,7 +37,7 @@ def phase_correction(data_fd, freqs=None, fit_range=None):
     data_fd[:, 1] = nan_to_num(data_fd[:, 1])
 
     if fit_range is None:
-        fit_range = [0.25, 0.5]
+        fit_range = [0.25, 0.50]
 
     if len(data_fd.shape) == 2:
         freqs = data_fd[:, 0]
@@ -101,3 +101,13 @@ def calc_absorption(freqs, k):
     a = (2 * omega * k) / c0
 
     return a / 100
+
+
+def cauchy_relation(freqs, p):
+    lam = (c0 / freqs) * 10 ** -9
+
+    n = np.zeros_like(lam)
+    for i, coeff in enumerate(p):
+        n += coeff * lam**(-2*i)
+
+    return n

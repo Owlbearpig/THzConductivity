@@ -1,8 +1,10 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
 from consts import data_dir
 from numpy.fft import fft, fftfreq
 from functions import windowing
+from Plotting.plot_data import plot
 
 
 class Measurement:
@@ -173,3 +175,9 @@ if __name__ == '__main__':
 
     ref_fd = avg_ref.get_data_fd(reversed_time=True)
     sam_fd = avg_sam.get_data_fd(reversed_time=True)
+
+    plot(ref_fd, label="ref")
+    plot(sam_fd, label="sample")
+
+
+    plt.show()

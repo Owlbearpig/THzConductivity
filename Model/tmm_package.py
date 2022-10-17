@@ -1,7 +1,7 @@
 from imports import *
 from Measurements.measurements import get_all_measurements, select_measurements
-from functions import do_ifft, phase_correction
-from helpers import is_iterable
+from Plotting.plot_data import plot
+from helpers import is_iterable, get_closest_idx
 from tmm import coh_tmm
 
 
@@ -40,6 +40,8 @@ def main():
     d_list = [inf, 500, inf]
     n = n_real + 1j * n_imag
 
+    #n[get_closest_idx(freqs, 0.070)] = 3.00 + 1j*n[get_closest_idx(freqs, 0.070)].imag
+
     t = tmm_package_wrapper(freqs, d_list, n)
 
     plt.figure()
@@ -55,55 +57,14 @@ def main():
     refs = [x for x in selected_measurements if x.meas_type == "ref"]
     sams = [x for x in selected_measurements if x.meas_type == "sam"]
 
-    ref_data_td, sam_data_td = refs[0].get_data_td(), sams[0].get_data_td()
-    t_td_ref, y_td_ref = ref_data_td[:, 0], ref_data_td[:, 1]
-    t_td_sam, y_td_sam = sam_data_td[:, 0], sam_data_td[:, 1]
-
     ref_fd, sam_fd = refs[0].get_data_fd(reversed_time=True), sams[0].get_data_fd(reversed_time=True)
 
     mod_fd = array([freqs, t * ref_fd[:, 1]]).T
 
-    td_sam_mod = do_ifft(mod_fd)
-
-    phase_sam_mod = phase_correction(mod_fd)
-    phase_ref = phase_correction(ref_fd)
-    phase_sam = phase_correction(sam_fd)
-
-    plt.figure()
-    plt.title("Wrapped phase")
-    plt.plot(freqs, np.angle(mod_fd[:, 1]), label="Sam. model", color="black")
-    plt.plot(freqs, np.angle(ref_fd[:, 1]), label="Ref. measurement")
-    plt.plot(freqs, np.angle(sam_fd[:, 1]), label="Sam. measurement")
-    plt.xlabel("Frequency (THz)")
-    plt.ylabel("Phase (rad)")
-    plt.legend()
-
-    plt.figure()
-    plt.title("Unwrapped phase")
-    plt.plot(freqs, phase_sam_mod, label="Sam. model", color="black")
-    plt.plot(freqs, phase_ref, label="Ref. measurement")
-    plt.plot(freqs, phase_sam, label="Sam. measurement")
-    plt.xlabel("Frequency (THz)")
-    plt.ylabel("Phase (rad)")
-    plt.legend()
-
-    plt.figure()
-    plt.title("Spectrum")
-    plt.plot(freqs, np.abs(mod_fd[:, 1]), label="Sam. model", color="black")
-    plt.plot(freqs, np.abs(ref_fd[:, 1]), label="Ref. measurement")
-    plt.plot(freqs, np.abs(sam_fd[:, 1]), label="Sam. measurement")
-    plt.xlabel("Frequency (THz)")
-    plt.ylabel("Amplitude (a.u.)")
-    plt.legend()
-
-    plt.figure()
-    plt.title("Time domain")
-    plt.plot(td_sam_mod[:,0], td_sam_mod[:,1], label="Sam. model", color="black")
-    plt.plot(t_td_ref, y_td_ref, label="Ref. measurement")
-    plt.plot(t_td_sam, y_td_sam, label="Sam. measurement")
-    plt.xlabel("Time (ps)")
-    plt.ylabel("Amplitude (a.u.)")
-    plt.legend()
+    plot(ref_fd, label="Ref. measurement")
+    plot(mod_fd, label="Sam. model")
+    plot(sam_fd, label="Sam. measurement")
+    plt.show()
 
 
 if __name__ == '__main__':

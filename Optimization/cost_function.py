@@ -1,10 +1,13 @@
+import matplotlib.pyplot as plt
+
 from imports import *
-from functions import do_ifft
+from functions import do_ifft, phase_correction, cauchy_relation
 from Measurements.measurements import get_avg_measurement
 from Model.transmission_approximation import ri_approx
 from functools import partial
 from Model.tmm_package import tmm_package_wrapper
 from helpers import get_closest_idx
+from Plotting.plot_data import plot
 from scipy.signal import correlate
 from scipy.stats import pearsonr
 
@@ -20,6 +23,7 @@ class Cost:
 
         self.ref_data_td, self.sam_data_td = None, None
         self.freqs = None
+        self.sam_phase_unwrapped, self.ref_phase_unwrapped = None, None
         self.ref_data_fd, self.sam_data_fd = self.eval_measurement()
 
     def eval_measurement(self):
@@ -39,6 +43,9 @@ class Cost:
 
             sam_fd[:, 1] = ref_fd[:, 1] * t
             self.sam_data_td = do_ifft(sam_fd, hermitian=True)
+
+        self.sam_phase_unwrapped = phase_correction(sam_fd)
+        self.ref_phase_unwrapped = phase_correction(ref_fd)
 
         return ref_fd, sam_fd
 
@@ -62,10 +69,10 @@ class Cost:
 
         amp_loss = (y_fd_mod.real - self.sam_data_fd[freq_idx, 1].real) ** 2
         phase_loss = (np.angle(y_fd_mod) - np.angle(self.sam_data_fd[freq_idx, 1])) ** 2
-        #phase_loss = (y_fd_mod.imag - self.sam_data_fd[freq_idx, 1].imag) ** 2
+        # phase_loss = (y_fd_mod.imag - self.sam_data_fd[freq_idx, 1].imag) ** 2
 
         loss = amp_loss + phase_loss
-        #print(amp_loss, phase_loss)
+        # print(amp_loss, phase_loss)
         loss = np.log10(loss)
 
         return loss
@@ -96,37 +103,97 @@ class Cost:
 
         return loss
 
+    def cost_1d(self, freq_idx, p):
+        if isinstance(freq_idx, float):
+            freq_idx = get_closest_idx(self.freqs, freq_idx)
+
+        n = p[0] + 1j * self.n_approx[freq_idx].imag
+
+        t = tmm_package_wrapper(self.freqs[freq_idx], self.d_list, n)
+
+        y_fd_mod = t * self.ref_data_fd[freq_idx, 1]
+
+        amp_loss = 0 * (y_fd_mod.real - self.sam_data_fd[freq_idx, 1].real) ** 2
+        phase_loss = (np.angle(y_fd_mod) - np.angle(self.sam_data_fd[freq_idx, 1])) ** 2
+        phase_loss = (y_fd_mod.imag - self.sam_data_fd[freq_idx, 1].imag) ** 2
+
+        loss = amp_loss + phase_loss
+        # print(amp_loss, phase_loss)
+        # loss = np.log10(loss)
+
+        return loss
+
+    def cost_unwrapped_phase(self, freq_idx, p):
+        if isinstance(freq_idx, float):
+            freq_idx = get_closest_idx(self.freqs, freq_idx)
+
+        n = self.n_approx.copy()
+        n[freq_idx] = p[0] + 1j * self.n_approx[freq_idx].imag
+
+        t = tmm_package_wrapper(self.freqs, self.d_list, n)
+
+        mod_fd = array([self.ref_data_fd[:, 0], t * self.ref_data_fd[:, 1]]).T
+
+        mod_phase_unwrapped = phase_correction(mod_fd)
+
+        eval_range = get_closest_idx(self.freqs, 0.05), get_closest_idx(self.freqs, 3.00)
+
+        loss = np.sum((mod_phase_unwrapped[eval_range[0]:eval_range[1]] -
+                       self.sam_phase_unwrapped[eval_range[0]:eval_range[1]]) ** 2)
+
+        return loss
+
+    def cost_cauchy_relation(self, p, en_plot = False):
+        n = cauchy_relation(self.freqs, p)
+
+        t = tmm_package_wrapper(self.freqs, self.d_list, n)
+
+        mod_fd = array([self.ref_data_fd[:, 0], t * self.ref_data_fd[:, 1]]).T
+
+        if en_plot:
+            plt.figure("Refractive index, cauchy relation")
+            plt.title("Refractive index, cauchy relation")
+            plt.plot(self.freqs, n)
+
+            plot(mod_fd, label="model")
+            plot(self.sam_data_fd, label="sam")
+
+        mod_phase_unwrapped = phase_correction(mod_fd)
+
+        eval_range = get_closest_idx(self.freqs, 0.20), get_closest_idx(self.freqs, 3.00)
+
+        loss = np.sum((mod_phase_unwrapped[eval_range[0]:eval_range[1]] -
+                       self.sam_phase_unwrapped[eval_range[0]:eval_range[1]]) ** 2)
+
+        return loss
+
 
 if __name__ == '__main__':
     d_list = [inf, 500, inf]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
-    freq = 0.3099
+    freq = 0.450
 
     new_cost = Cost(d_list, keywords, simulated_sample=False, local_verbose=True)
-    cost_func = partial(new_cost.cost, freq)
+
+    cost_func = partial(new_cost.cost_cauchy_relation)
     freq_idx = get_closest_idx(new_cost.freqs, freq)
-    for i in range(0, 10):
-        val = new_cost.sam_data_fd[freq_idx + 5 - i]
-        print(val)
-        print(np.abs(val[1]), np.angle(val[1]), "\n")
-    n_goal = new_cost.n_approx[freq_idx]
 
-    bounds = (0.0001, 0.2)
-    rez_y = 500
-    k_line = np.linspace(bounds[0], bounds[1], rez_y)
 
+    a = 3.20
+    b_line = np.linspace(0.000254, 0.000354, 100)
     cost_vals = []
-    for k in k_line:
-        cost_vals.append(cost_func([n_goal.real * 1, k]))
+    for i, b in enumerate(b_line):
+        print(i, b)
+        #cost_vals.append(cost_func([3.658, 0.000354]))
+        cost_vals.append(cost_func([a, b]))
 
     plt.figure()
-    plt.plot(k_line, cost_vals, label="cost value")
-    plt.title("Value of cost as a function of k,\n at goal refractive index")
-    plt.legend()
-    plt.ylabel("Value of cost function")
-    plt.xlabel("k")
+    plt.plot(cost_vals)
 
-    print(f"Goal k: {n_goal.imag}")
+    b = b_line[np.argmin(cost_vals)]
+    print(b)
+    print(min(cost_vals))
+    new_cost.cost_cauchy_relation(p=[a, b], en_plot=True)
 
     plt.show()
