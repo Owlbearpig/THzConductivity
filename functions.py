@@ -6,15 +6,17 @@ from numpy.fft import fft, ifft, fftfreq
 from scipy import signal
 
 
-def do_fft(t, y_td, pos_freqs_only=True):
-    dt = float(np.mean(np.diff(t)))
-    freqs, data_fd = fftfreq(n=len(t), d=dt), fft(y_td)
+def do_fft(data_td, pos_freqs_only=True):
+    data_td = nan_to_num(data_td)
+
+    dt = float(np.mean(np.diff(data_td[:, 0])))
+    freqs, data_fd = fftfreq(n=len(data_td[:, 0]), d=dt), fft(data_td[:, 1])
 
     if pos_freqs_only:
         post_freq_slice = freqs >= 0
-        return freqs[post_freq_slice], data_fd[post_freq_slice]
+        return array([freqs[post_freq_slice], data_fd[post_freq_slice]]).T
     else:
-        return freqs, data_fd
+        return array([freqs, data_fd]).T
 
 
 def do_ifft(data_fd, hermitian=False):
@@ -26,7 +28,7 @@ def do_ifft(data_fd, hermitian=False):
         y_fd = np.concatenate((y_fd, np.flip(np.conj(y_fd[1:]))))
 
     y_td = ifft(y_fd)
-    t = np.arange(len(y_td)) / (1*freqs.max())
+    t = np.arange(len(y_td)) / (1 * freqs.max())
     t += 1650
 
     y_td = np.flip(y_td)
@@ -44,7 +46,7 @@ def unwrap(data_fd):
 
     phase_unwrapped = np.unwrap(phase)
 
-    return phase_unwrapped
+    return np.abs(phase_unwrapped)
 
 
 def phase_correction(data_fd, fit_range=None, verbose=verbose):
@@ -102,7 +104,6 @@ def windowing(data_td):
     return data_td_windowed
 
 
-
 def calc_absorption(freqs, k):
     # Assuming freqs in range (0, 10 THz), returns a in units of 1/cm (1/m * 1/100)
     omega = 2 * pi * freqs * THz
@@ -116,6 +117,47 @@ def cauchy_relation(freqs, p):
 
     n = np.zeros_like(lam)
     for i, coeff in enumerate(p):
-        n += coeff * lam**(-2*i)
+        n += coeff * lam ** (-2 * i)
 
     return n
+
+
+def add_noise(data_fd, enabled=True, scale=0.05, seed=None, en_plots=False):
+    data_ret = nan_to_num(data_fd)
+
+    np.random.seed(seed)
+
+    if not enabled:
+        return data_ret
+
+    noise_phase = np.random.normal(0, scale*2, len(data_fd[:, 0]))
+    noise_amp = np.random.normal(0, scale*1.5, len(data_fd[:, 0]))
+
+    phi, magn = np.angle(data_fd[:, 1]), np.abs(data_fd[:, 1])
+
+    phi_noisy = phi + noise_phase
+    magn_noisy = magn * (1 + noise_amp)
+
+    if en_plots:
+        freqs = data_ret[:, 0]
+
+        plt.figure("Phase")
+        plt.plot(freqs, phi, label="Original data")
+        plt.plot(freqs, phi_noisy, label="+ noise")
+        plt.xlabel("Frequency (THz)")
+        plt.ylabel("Phase (rad)")
+        plt.legend()
+
+        plt.figure("Spectrum")
+        plt.plot(freqs, magn, label="Original data")
+        plt.plot(freqs, magn_noisy, label="+ noise")
+        plt.xlabel("Frequency (THz)")
+        plt.ylabel("Amplitude (a.u.)")
+        plt.legend()
+        plt.show()
+
+    noisy_data = magn_noisy * np.exp(1j*phi_noisy)
+
+    data_ret[:, 1] = noisy_data.real + 1j * noisy_data.imag
+
+    return data_ret

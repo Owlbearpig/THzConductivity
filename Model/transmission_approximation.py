@@ -10,7 +10,7 @@ def ri_approx(ref_data_fd, sam_data_fd, thickness):
     freqs = ref_data_fd[:, 0]
     omega = 2 * pi * freqs * THz
 
-    fit_range = [0.25, 0.5]
+    fit_range = [0.25, 0.50]
     corrected_ref_phase = phase_correction(ref_data_fd, fit_range=fit_range)
     corrected_sam_phase = phase_correction(sam_data_fd, fit_range=fit_range)
 
@@ -34,8 +34,7 @@ def main():
     # keywords = ["InP 5", "2021_10_27"]
     # sam_thickess = 380 * um
 
-    pp_config = {"sub_offset": True, "en_windowing": True}
-    avg_ref, avg_sam = get_avg_measurement(keywords, pp_config=pp_config)
+    avg_ref, avg_sam = get_avg_measurement(keywords)
 
     avg_ref_data_td, avg_sam_data_td = avg_ref.get_data_td(), avg_sam.get_data_td()
     avg_ref_data_fd, avg_sam_data_fd = avg_ref.get_data_fd(), avg_sam.get_data_fd()

@@ -9,17 +9,17 @@ def main():
     d_list = [inf, 500, inf]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
-    new_cost = Cost(d_list, keywords, simulated_sample=False)
+    new_cost = Cost(d_list, keywords, sam_idx=9)
     freqs = new_cost.freqs
-    freq = 0.3099
+    freq = 0.600
     selected_freq_idx = np.argmin(np.abs(freqs - freq))
-    print(f"Selected frequency: {freqs[selected_freq_idx]} (THz)")
+    print(f"Selected frequency: {freqs[selected_freq_idx]} (THz), idx: {selected_freq_idx}")
 
     cost_func = partial(new_cost.cost, selected_freq_idx)
 
-    bounds = [(3.0, 4.0), (0.001, 0.02)]
+    bounds = [[3.4, 3.9], [0.002, 0.020]]
 
-    rez_x, rez_y = 100, 100
+    rez_x, rez_y = 300, 300
     grd_x = np.linspace(bounds[0][0], bounds[0][1], rez_x)
     grd_y = np.linspace(bounds[1][0], bounds[1][1], rez_y)
 
@@ -49,10 +49,10 @@ def main():
     min_x, min_y = np.unravel_index(g_min_idx, grid_vals.shape)
 
     p_found = [grd_x[min_x], grd_y[min_y]]
-    print(f"Found: {grd_x[min_x] + 1j*grd_y[min_y]}, fx={cost_func(p_found)}")
+    print(f"Found: {p_found}, fx={cost_func(p_found)}")
 
     p_goal = [new_cost.n_approx[selected_freq_idx].real, new_cost.n_approx[selected_freq_idx].imag]
-    print(f"Goal: {new_cost.n_approx[selected_freq_idx]}, fx={cost_func(p_goal)}")
+    print(f"Goal: {p_goal}, fx={cost_func(p_goal)}")
 
     cbar = fig.colorbar(img)
     cbar.set_label("loss", rotation=270, labelpad=20)

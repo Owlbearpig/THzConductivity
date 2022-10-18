@@ -3,7 +3,7 @@ from functions import phase_correction, do_ifft
 
 
 def plot(data_fd, label=""):
-    if "mod" in label.lower():
+    if "model" in label.lower():
         color = "black"
     else:
         color = None

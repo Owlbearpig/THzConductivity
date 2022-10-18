@@ -123,41 +123,40 @@ def avg_data(measurements):
     return np.array([t, np.mean(y_arrays, axis=0)]).T
 
 
-def select_measurements(path_list, keywords=None, case_sensitive=True):
-    if keywords is None:
-        return path_list
+def select_measurements(keywords, case_sensitive=True):
+    measurements = get_all_measurements()
 
     if not case_sensitive:
         keywords = [keyword.lower() for keyword in keywords]
-        path_list = [str(path).lower() for path in path_list]
 
-    ret = []
-    for filepath in path_list:
-        if all([keyword in str(filepath) for keyword in keywords]):
-            ret.append(filepath)
+    selected = []
+    for measurement in measurements:
+        if all([keyword in str(measurement) for keyword in keywords]):
+            selected.append(measurement)
 
     ref_cnt, sam_cnt = 0, 0
-    for selected_path in ret:
-        if "sam" in str(selected_path).lower():
+    for selected_measurement in selected:
+        if "sam" in str(selected_measurement).lower():
             sam_cnt += 1
-        elif "ref" in str(selected_path).lower():
+        elif "ref" in str(selected_measurement).lower():
             ref_cnt += 1
     print(f"Number of reference and sample measurements in selection: {ref_cnt}, {sam_cnt}")
 
-    ret.sort(key=lambda x: x.meas_time)
+    selected.sort(key=lambda x: x.meas_time)
 
-    print("Time between first and last measurement: ", ret[-1].meas_time - ret[0].meas_time)
+    print("Time between first and last measurement: ", selected[-1].meas_time - selected[0].meas_time)
 
-    return ret
+    sams = [x for x in selected if x.meas_type == "sam"]
+    refs = [x for x in selected if x.meas_type == "ref"]
+
+    return refs, sams
 
 
 def get_avg_measurement(keywords=("GaAs", "Wafer", "25", "2021_08_24"), pp_config=None):
-    measurements = get_all_measurements()
+    if pp_config is None:
+        pp_config = {"sub_offset": True, "en_windowing": True}
 
-    selected_measurements = select_measurements(measurements, keywords)
-
-    sams = [x for x in selected_measurements if x.meas_type == "sam"]
-    refs = [x for x in selected_measurements if x.meas_type == "ref"]
+    refs, sams = select_measurements(keywords)
 
     avg_ref = Measurement(data_td=avg_data(refs), meas_type="ref", post_process_config=pp_config)
     avg_sam = Measurement(data_td=avg_data(sams), meas_type="sam", post_process_config=pp_config)
@@ -168,16 +167,15 @@ def get_avg_measurement(keywords=("GaAs", "Wafer", "25", "2021_08_24"), pp_confi
 if __name__ == '__main__':
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
-    pp_config = {"sub_offset": True, "en_windowing": False}
-    avg_ref, avg_sam = get_avg_measurement(keywords, pp_config=pp_config)
+    refs, sams = select_measurements(keywords)
 
-    ref_data_td, sam_data_td = avg_ref.get_data_td(), avg_sam.get_data_td()
+    ref0_fd = refs[0].get_data_fd(reversed_time=True)
+    sam0_fd = sams[0].get_data_fd(reversed_time=True)
 
-    ref_fd = avg_ref.get_data_fd(reversed_time=True)
-    sam_fd = avg_sam.get_data_fd(reversed_time=True)
-
-    plot(ref_fd, label="ref")
-    plot(sam_fd, label="sample")
-
+    plot(ref0_fd, label="ref")
+    plot(sam0_fd, label="sample0")
+    for i in range(1, 10):
+        sam_i = sams[i].get_data_fd(reversed_time=True)
+        plot(sam_i, label=f"sample{i}")
 
     plt.show()

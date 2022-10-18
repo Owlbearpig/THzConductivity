@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 
-from Measurements.measurements import select_measurements, get_avg_measurement
 from imports import *
-from functions import do_ifft, add_noise
 from Model.tmm_package import tmm_package_wrapper
+from Measurements.measurements import select_measurements, get_avg_measurement
 from Model.transmission_approximation import ri_approx
+from functions import add_noise, do_fft
 from Plotting.plot_data import plot
 
 
@@ -24,16 +24,15 @@ def main():
     ref0_fd = refs[0].get_data_fd(reversed_time=True)
     sam0_fd = sams[0].get_data_fd(reversed_time=True)
 
-    mod_fd_noise = add_noise(mod_fd, en_plots=True, seed=420)
+    data_qs = do_fft(mod_fd)
 
-    plot(mod_fd, label="model")
-    # plot(avg_ref_fd, label="ref")
-    # plot(avg_sam_fd, label="sample0")
-    plot(mod_fd_noise, label="mod with noise")
+    plt.figure()
+    plt.plot(np.abs(data_qs[:, 1]))
+
+    plot(mod_fd)
 
     plt.show()
 
 
 if __name__ == '__main__':
     main()
-    plt.show()

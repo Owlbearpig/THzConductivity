@@ -1,6 +1,6 @@
 from imports import *
-from functions import do_ifft, phase_correction, unwrap
-from Measurements.measurements import get_avg_measurement
+from functions import do_ifft, phase_correction, add_noise
+from Measurements.measurements import get_avg_measurement, select_measurements
 from Model.transmission_approximation import ri_approx
 from functools import partial
 from Model.tmm_package import tmm_package_wrapper
@@ -12,11 +12,12 @@ from scipy.optimize import shgo, minimize, basinhopping
 
 
 class Cost:
-    def __init__(self, d_list, keywords, simulated_sample=False, local_verbose=False):
+    def __init__(self, d_list, keywords, sam_idx=0, simulated_sample=False, en_noise=True):
         self.keywords = keywords
         self.d_list = d_list
         self.simulated_sample = simulated_sample
-        self.verbose = local_verbose
+        self.en_noise = en_noise
+        self.sam_idx = sam_idx
 
         self.n_approx = self.ri_approximation()
 
@@ -28,11 +29,14 @@ class Cost:
     def eval_measurement(self):
         pp_config = {"sub_offset": True, "en_windowing": False}
         avg_ref, avg_sam = get_avg_measurement(self.keywords, pp_config=pp_config)
+        refs, sams = select_measurements(self.keywords)
 
-        self.ref_data_td, self.sam_data_td = avg_ref.get_data_td(), avg_sam.get_data_td()
+        ref, sam = refs[self.sam_idx], sams[self.sam_idx]
 
-        ref_fd = avg_ref.get_data_fd(reversed_time=True)
-        sam_fd = avg_sam.get_data_fd(reversed_time=True)
+        self.ref_data_td, self.sam_data_td = ref.get_data_td(), sam.get_data_td()
+
+        ref_fd = ref.get_data_fd(reversed_time=True)
+        sam_fd = sam.get_data_fd(reversed_time=True)
 
         self.freqs = ref_fd[:, 0].real
 
@@ -43,14 +47,16 @@ class Cost:
             sam_fd[:, 1] = ref_fd[:, 1] * t
             self.sam_data_td = do_ifft(sam_fd, hermitian=True)
 
+        if self.en_noise:
+            sam_fd = add_noise(sam_fd, scale=0.005)
+
         self.sam_phase_unwrapped = phase_correction(sam_fd)
         self.ref_phase_unwrapped = phase_correction(ref_fd)
 
         return ref_fd, sam_fd
 
     def ri_approximation(self):
-        pp_config = {"sub_offset": True, "en_windowing": True}
-        avg_ref, avg_sam = get_avg_measurement(self.keywords, pp_config=pp_config)
+        avg_ref, avg_sam = get_avg_measurement(self.keywords)
 
         n_approx = ri_approx(avg_ref.get_data_fd(), avg_sam.get_data_fd(), self.d_list[1] * um)
 
@@ -66,11 +72,11 @@ class Cost:
 
         y_fd_mod = t * self.ref_data_fd[freq_idx, 1]
 
-        amp_loss = (y_fd_mod.real - self.sam_data_fd[freq_idx, 1].real) ** 2
-        phase_loss = (np.angle(y_fd_mod) - np.angle(self.sam_data_fd[freq_idx, 1])) ** 2
+        amp_loss = np.abs(y_fd_mod) - np.abs(self.sam_data_fd[freq_idx, 1])
+        phase_loss = np.angle(y_fd_mod) - np.angle(self.sam_data_fd[freq_idx, 1])
         # phase_loss = (y_fd_mod.imag - self.sam_data_fd[freq_idx, 1].imag) ** 2
 
-        loss = amp_loss + phase_loss
+        loss = np.abs(amp_loss) + np.abs(phase_loss)
         # print(amp_loss, phase_loss)
         loss = np.log10(loss)
 
@@ -81,7 +87,7 @@ class Cost:
         freqs = self.ref_data_fd[:, 0]
         freq_range = freqs[freq_idx:freq_idx+width]
 
-        n = array([p[2*i] + 1j * p[2*i+1] / 1000 for i in range(width)])
+        n = array([p[2*i] + 1j * p[2*i+1] for i in range(width)])
 
         t = tmm_package_wrapper(freq_range, self.d_list, n)
 
@@ -104,22 +110,20 @@ if __name__ == '__main__':
     d_list = [inf, 500, inf]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
-    freq = 0.600
+    freq = 0.605
 
-    new_cost = Cost(d_list, keywords, simulated_sample=True, local_verbose=True)
+    new_cost = Cost(d_list, keywords, sam_idx=0)
     freq_idx = get_closest_idx(new_cost.freqs, freq)
 
-    width = 1
-    cost_func = partial(new_cost.cost_range, freq_idx, width)
-    p_goal = array([[n.real, n.imag] for n in new_cost.n_approx[freq_idx:freq_idx+width]]).flatten()
+    cost_func = partial(new_cost.cost, freq_idx)
+    p_goal = new_cost.n_approx[freq_idx]
 
-    p0 = 0.95 * p_goal
-    p0[1::2] *= 1000.0
+    p0 = 1 * p_goal
+    p0 = p0.real + 1j*p0.imag
     print(p0)
+    print(cost_func([p0.real, p0.imag]))
 
-    print(cost_func(p0))
-
-    bounds = width * [[3.4, 4.0], [2.0, 20.0]]
+    bounds = [[3.4, 3.9], [0.002, 0.020]]
     #bounds = width * [[3.4, 4.0], [0.002, 0.020]]
     print(bounds)
 
@@ -131,13 +135,11 @@ if __name__ == '__main__':
     #bounded_step = RandomDisplacementBounds(np.array([b[0] for b in bounds]), np.array([b[1] for b in bounds]))
     #res = basinhopping(cost_func, x0=p0, stepsize=0.02, niter=100, minimizer_kwargs=minimizer_kwargs, take_step=bounded_step)
 
-    res = minimize(cost_func, x0=p0, bounds=bounds, method="Nelder-Mead")
+    res = minimize(cost_func, x0=array([p0.real, p0.imag]), bounds=bounds, method="Nelder-Mead")
     print(res)
 
     x = res.x.copy()
-    x[1::2] /= 1000.0
     print("Found: ", x)
-    print("Goal: ", p_goal)
-    print(sum((x - p_goal)**2))
+    print("Goal: ", [p_goal.real, p_goal.imag])
 
     plt.show()
