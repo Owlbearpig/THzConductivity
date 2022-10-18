@@ -1,7 +1,5 @@
-import matplotlib.pyplot as plt
-
 from imports import *
-from functions import do_ifft, phase_correction, cauchy_relation
+from functions import do_ifft, phase_correction, unwrap
 from Measurements.measurements import get_avg_measurement
 from Model.transmission_approximation import ri_approx
 from functools import partial
@@ -10,6 +8,7 @@ from helpers import get_closest_idx
 from Plotting.plot_data import plot
 from scipy.signal import correlate
 from scipy.stats import pearsonr
+from scipy.optimize import shgo, minimize, basinhopping
 
 
 class Cost:
@@ -77,123 +76,68 @@ class Cost:
 
         return loss
 
-    def td_cost(self, freq_index, p):
-        n = self.n_approx.copy()
+    def cost_range(self, freq_idx, width, p):
+        width = width
+        freqs = self.ref_data_fd[:, 0]
+        freq_range = freqs[freq_idx:freq_idx+width]
 
-        n[freq_index] = p[0] + 1j * p[1]
+        n = array([p[2*i] + 1j * p[2*i+1] / 1000 for i in range(width)])
 
-        t = tmm_package_wrapper(self.freqs, self.d_list, n)
+        t = tmm_package_wrapper(freq_range, self.d_list, n)
 
-        y_fd_sam_mod = t * self.ref_data_fd[:, 1]
+        y_fd_mod = t * self.ref_data_fd[freq_idx:freq_idx+width, 1]
 
-        td_sam_mod = do_ifft(y_fd_sam_mod, hermitian=True)
+        amp_loss = np.sum(np.abs(y_fd_mod) - np.abs(self.sam_data_fd[freq_idx:freq_idx+width, 1]))
 
-        # pears = pearsonr(self.sam_data_td[:, 1], y_td_sam_mod)
+        phase_loss = np.sum(np.angle(y_fd_mod) - np.angle(self.sam_data_fd[freq_idx:freq_idx + width, 1]))
 
-        loss = np.sum((np.abs(td_sam_mod[:, 1]) - np.abs(self.sam_data_td[:, 1])) ** 2) / len(td_sam_mod[:, 1])
+        penalty = np.sum(np.diff(n.real)**2 / width)
+        #print(amp_loss, phase_loss)
+        #print(np.log10(amp_loss), np.log10(phase_loss))
+        #return np.log10(amp_loss) + np.log10(phase_loss) #+ np.log10(penalty)
+        return np.abs(amp_loss) + np.abs(phase_loss)
 
-        plt.figure()
-        plt.title("Time domain")
-        plt.plot(td_sam_mod[:, 0], td_sam_mod[:, 1], label="Sam. model", color="black")
-        plt.plot(self.ref_data_td[:, 0], self.ref_data_td[:, 1], label="Ref. measurement")
-        plt.plot(self.sam_data_td[:, 0], self.sam_data_td[:, 1], label="Sam. measurement")
-        plt.xlabel("Time (ps)")
-        plt.ylabel("Amplitude (a.u.)")
-        plt.legend()
 
-        return loss
-
-    def cost_1d(self, freq_idx, p):
-        if isinstance(freq_idx, float):
-            freq_idx = get_closest_idx(self.freqs, freq_idx)
-
-        n = p[0] + 1j * self.n_approx[freq_idx].imag
-
-        t = tmm_package_wrapper(self.freqs[freq_idx], self.d_list, n)
-
-        y_fd_mod = t * self.ref_data_fd[freq_idx, 1]
-
-        amp_loss = 0 * (y_fd_mod.real - self.sam_data_fd[freq_idx, 1].real) ** 2
-        phase_loss = (np.angle(y_fd_mod) - np.angle(self.sam_data_fd[freq_idx, 1])) ** 2
-        phase_loss = (y_fd_mod.imag - self.sam_data_fd[freq_idx, 1].imag) ** 2
-
-        loss = amp_loss + phase_loss
-        # print(amp_loss, phase_loss)
-        # loss = np.log10(loss)
-
-        return loss
-
-    def cost_unwrapped_phase(self, freq_idx, p):
-        if isinstance(freq_idx, float):
-            freq_idx = get_closest_idx(self.freqs, freq_idx)
-
-        n = self.n_approx.copy()
-        n[freq_idx] = p[0] + 1j * self.n_approx[freq_idx].imag
-
-        t = tmm_package_wrapper(self.freqs, self.d_list, n)
-
-        mod_fd = array([self.ref_data_fd[:, 0], t * self.ref_data_fd[:, 1]]).T
-
-        mod_phase_unwrapped = phase_correction(mod_fd)
-
-        eval_range = get_closest_idx(self.freqs, 0.05), get_closest_idx(self.freqs, 3.00)
-
-        loss = np.sum((mod_phase_unwrapped[eval_range[0]:eval_range[1]] -
-                       self.sam_phase_unwrapped[eval_range[0]:eval_range[1]]) ** 2)
-
-        return loss
-
-    def cost_cauchy_relation(self, p, en_plot = False):
-        n = cauchy_relation(self.freqs, p)
-
-        t = tmm_package_wrapper(self.freqs, self.d_list, n)
-
-        mod_fd = array([self.ref_data_fd[:, 0], t * self.ref_data_fd[:, 1]]).T
-
-        if en_plot:
-            plt.figure("Refractive index, cauchy relation")
-            plt.title("Refractive index, cauchy relation")
-            plt.plot(self.freqs, n)
-
-            plot(mod_fd, label="model")
-            plot(self.sam_data_fd, label="sam")
-
-        mod_phase_unwrapped = phase_correction(mod_fd)
-
-        eval_range = get_closest_idx(self.freqs, 0.20), get_closest_idx(self.freqs, 3.00)
-
-        loss = np.sum((mod_phase_unwrapped[eval_range[0]:eval_range[1]] -
-                       self.sam_phase_unwrapped[eval_range[0]:eval_range[1]]) ** 2)
-
-        return loss
 
 
 if __name__ == '__main__':
     d_list = [inf, 500, inf]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
-    freq = 0.450
+    freq = 0.600
 
-    new_cost = Cost(d_list, keywords, simulated_sample=False, local_verbose=True)
-
-    cost_func = partial(new_cost.cost_cauchy_relation)
+    new_cost = Cost(d_list, keywords, simulated_sample=True, local_verbose=True)
     freq_idx = get_closest_idx(new_cost.freqs, freq)
 
+    width = 1
+    cost_func = partial(new_cost.cost_range, freq_idx, width)
+    p_goal = array([[n.real, n.imag] for n in new_cost.n_approx[freq_idx:freq_idx+width]]).flatten()
 
-    a = 3.20
-    b_line = np.linspace(0.000254, 0.000354, 100)
-    cost_vals = []
-    for i, b in enumerate(b_line):
-        print(i, b)
-        #cost_vals.append(cost_func([3.658, 0.000354]))
-        cost_vals.append(cost_func([a, b]))
+    p0 = 0.95 * p_goal
+    p0[1::2] *= 1000.0
+    print(p0)
 
-    plt.figure()
-    plt.plot(cost_vals)
+    print(cost_func(p0))
 
-    b = b_line[np.argmin(cost_vals)]
-    print(b)
-    print(min(cost_vals))
-    new_cost.cost_cauchy_relation(p=[a, b], en_plot=True)
+    bounds = width * [[3.4, 4.0], [2.0, 20.0]]
+    #bounds = width * [[3.4, 4.0], [0.002, 0.020]]
+    print(bounds)
+
+    #minimizer_kwargs = {"tol": 1e-14, "method": "Nelder-Mead", "bounds": bounds}
+    minimizer_kwargs = {"bounds": bounds, "method": "Nelder-Mead"}
+    #res = shgo(cost_func, bounds=bounds, n=100, iters=2, minimizer_kwargs=minimizer_kwargs, options={"disp": True})
+    #res = shgo(cost_func, bounds=bounds, options={"disp": True}, minimizer_kwargs = {"bounds": bounds})
+
+    #bounded_step = RandomDisplacementBounds(np.array([b[0] for b in bounds]), np.array([b[1] for b in bounds]))
+    #res = basinhopping(cost_func, x0=p0, stepsize=0.02, niter=100, minimizer_kwargs=minimizer_kwargs, take_step=bounded_step)
+
+    res = minimize(cost_func, x0=p0, bounds=bounds, method="Nelder-Mead")
+    print(res)
+
+    x = res.x.copy()
+    x[1::2] /= 1000.0
+    print("Found: ", x)
+    print("Goal: ", p_goal)
+    print(sum((x - p_goal)**2))
 
     plt.show()

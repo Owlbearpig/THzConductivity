@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 
 from imports import *
@@ -33,19 +34,26 @@ def do_ifft(data_fd, hermitian=False):
     return array([t, y_td]).T
 
 
-def phase_correction(data_fd, freqs=None, fit_range=None):
-    data_fd[:, 1] = nan_to_num(data_fd[:, 1])
+def unwrap(data_fd):
+    if data_fd.ndim == 2:
+        y = nan_to_num(data_fd[:, 1])
+    else:
+        y = nan_to_num(data_fd)
+
+    phase = np.angle(y)
+
+    phase_unwrapped = np.unwrap(phase)
+
+    return phase_unwrapped
+
+
+def phase_correction(data_fd, fit_range=None, verbose=verbose):
+    freqs = data_fd[:, 0]
+
+    phase_unwrapped = unwrap(data_fd)
 
     if fit_range is None:
         fit_range = [0.25, 0.50]
-
-    if len(data_fd.shape) == 2:
-        freqs = data_fd[:, 0]
-        phase = np.angle(data_fd[:, 1])
-    else:
-        phase = np.angle(data_fd)
-
-    phase_unwrapped = np.unwrap(phase)
 
     fit_slice = (freqs >= fit_range[0]) * (freqs <= fit_range[1])
     p = np.polyfit(freqs[fit_slice], phase_unwrapped[fit_slice], 1)
