@@ -46,7 +46,7 @@ def unwrap(data_fd):
 
     phase_unwrapped = np.unwrap(phase)
 
-    return np.abs(phase_unwrapped)
+    return phase_unwrapped
 
 
 def phase_correction(data_fd, fit_range=None, verbose=verbose):

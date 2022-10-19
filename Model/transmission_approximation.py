@@ -15,6 +15,7 @@ def ri_approx(ref_data_fd, sam_data_fd, thickness):
     corrected_sam_phase = phase_correction(sam_data_fd, fit_range=fit_range)
 
     phase_diff = corrected_ref_phase - corrected_sam_phase
+
     if any(phase_diff[(fit_range[0] < freqs)*(freqs < fit_range[1])] < 0):
         phase_diff = -1 * phase_diff
 
@@ -51,30 +52,26 @@ def main():
         plt.plot(freqs, np.log10(np.abs(avg_ref_data_fd[:, 1])))
         plt.plot(freqs, np.log10(np.abs(avg_sam_data_fd[:, 1])))
 
-    n, a, k = ri_approx(avg_ref_data_fd, avg_sam_data_fd, sam_thickess)
+    n = ri_approx(avg_ref_data_fd, avg_sam_data_fd, sam_thickess)
 
     plt.figure()
     plt.title("Extinction coefficient")
-    plt.plot(freqs[(freqs > 0.00) * (freqs < 3.00)], k[(freqs > 0.00) * (freqs < 3.00)])
+    plt.plot(freqs[(freqs > 0.00) * (freqs < 3.00)], n.imag[(freqs > 0.00) * (freqs < 3.00)])
     plt.xlabel("Frequency (THz)")
     plt.ylabel("Extinction coefficient")
 
     plt.figure()
     plt.title("Refractive index")
-    plt.plot(freqs[(freqs > 0.25) * (freqs < 3.00)], n[(freqs > 0.25) * (freqs < 3.00)])
+    plt.plot(freqs[(freqs > 0.25) * (freqs < 3.00)], n.real[(freqs > 0.25) * (freqs < 3.00)])
     plt.xlabel("Frequency (THz)")
     plt.ylabel("Refractive index")
 
+    a = calc_absorption(freqs, n.imag)
     plt.figure()
     plt.title("Absorption coefficient")
     plt.plot(freqs[(freqs > 0.25) * (freqs < 3.00)], a[(freqs > 0.25) * (freqs < 3.00)])
     plt.xlabel("Frequency (THz)")
     plt.ylabel("Absorption coefficient (1/cm)")
-
-    np.save("freqs_" + "_".join(keywords), freqs)
-    np.save("n_" + "_".join(keywords), n)
-    np.save("a_" + "_".join(keywords), a)
-    np.save("k_" + "_".join(keywords), k)
 
 
 if __name__ == '__main__':

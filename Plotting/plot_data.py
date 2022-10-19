@@ -2,12 +2,7 @@ from imports import *
 from functions import phase_correction, do_ifft
 
 
-def plot(data_fd, label=""):
-    if "model" in label.lower():
-        color = "black"
-    else:
-        color = None
-
+def plot(data_fd, label="", color=None):
     freqs = data_fd[:, 0]
 
     plt.figure("Wrapped phase")

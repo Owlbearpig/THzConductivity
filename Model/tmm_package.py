@@ -1,8 +1,12 @@
+import numpy as np
+
 from imports import *
 from Measurements.measurements import get_all_measurements, select_measurements
 from Plotting.plot_data import plot
 from helpers import is_iterable, get_closest_idx
 from tmm import coh_tmm
+from Results.parse_teralyzer_results import select_results
+from scipy.interpolate import interp1d
 
 
 def tmm_package_wrapper(freqs, d_list, n):
@@ -22,6 +26,48 @@ def tmm_package_wrapper(freqs, d_list, n):
     return t_list
 
 
+def tmm_teralyzer_result(keywords, d_list, ref_fd, en_plot=False):
+    # use refractive index from teralyzer to calculate t at ref freqs.
+    #   -> mod_fd = t * ref_fd
+
+    res = select_results(keywords)[0]
+    print("Using refractive index of result: ", res)
+    n = res.get_n()
+
+    freqs = ref_fd[:, 0].real
+    freq_slice = (freqs >= n[:, 0].real.min()) * (freqs <= n[:, 0].real.max())
+    freqs = freqs[freq_slice]
+
+    n_interpolator = interp1d(n[:, 0].real, n[:, 1], kind="linear")
+    n_interp = n_interpolator(freqs)
+
+    if en_plot:
+        plt.figure("Refractive index real")
+        plt.plot(n[:, 0].real, n[:, 1].real, label="n real teralyzer")
+        plt.plot(freqs, n_interp.real, label="n real interpolated")
+        plt.xlabel("Frequency (THz)")
+        plt.xlabel("Refractive index")
+        plt.legend()
+
+        plt.figure("Refractive index imag")
+        plt.plot(n[:, 0].real, n[:, 1].imag, label="n imag teralyzer")
+        plt.plot(freqs, n_interp.imag, label="n imag interpolated")
+        plt.xlabel("Frequency (THz)")
+        plt.xlabel("Extinction coefficient")
+        plt.legend()
+
+    t = tmm_package_wrapper(freqs, d_list, n[:, 1])
+    mod_fd = t * ref_fd[freq_slice, 1]
+
+    df = np.mean(np.diff(freqs))
+    min_freq, max_freq = freqs.min(), freqs.max()
+    freqs = np.concatenate((np.arange(0, min_freq, df), freqs, np.arange(max_freq, 10, df)))
+    leading_0, trailing_0 = np.zeros(len(np.arange(0, min_freq, df))), np.zeros(len(np.arange(max_freq, 10, df)))
+    mod_fd = np.concatenate((leading_0, mod_fd, trailing_0))
+
+    return array([freqs, mod_fd]).T
+
+
 def main():
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
@@ -38,6 +84,7 @@ def main():
     freqs = freqs[freq_slice]
 
     d_list = [inf, 500, inf]
+
     n = n_real + 1j * n_imag
 
     #n[get_closest_idx(freqs, 0.070)] = 3.00 + 1j*n[get_closest_idx(freqs, 0.070)].imag

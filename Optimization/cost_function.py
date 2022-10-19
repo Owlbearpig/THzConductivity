@@ -31,7 +31,7 @@ class Cost:
         avg_ref, avg_sam = get_avg_measurement(self.keywords, pp_config=pp_config)
         refs, sams = select_measurements(self.keywords)
 
-        ref, sam = refs[self.sam_idx], sams[self.sam_idx]
+        ref, sam = avg_ref, avg_sam #refs[self.sam_idx], sams[self.sam_idx]
 
         self.ref_data_td, self.sam_data_td = ref.get_data_td(), sam.get_data_td()
 
