@@ -5,10 +5,8 @@ from Model.transmission_approximation import ri_approx
 from functools import partial
 from Model.tmm_package import tmm_package_wrapper
 from helpers import get_closest_idx
-from Plotting.plot_data import plot_field
-from scipy.signal import correlate
-from scipy.stats import pearsonr
 from scipy.optimize import shgo, minimize, basinhopping
+from numba import jit
 
 
 class Cost:

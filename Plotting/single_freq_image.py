@@ -9,7 +9,7 @@ def main():
     d_list = [inf, 500, inf]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
-    new_cost = Cost(d_list, keywords, sam_idx=5, simulated_sample=False)
+    new_cost = Cost(d_list, keywords, sam_idx=9, simulated_sample=False)
     freqs = new_cost.freqs
     freq = 0.605
     selected_freq_idx = np.argmin(np.abs(freqs - freq))
@@ -41,7 +41,7 @@ def main():
                     cmap=plt.get_cmap("jet"),
                     extent=extent,
                     aspect=aspect)
-
+    np.save("test", grid_vals)
     ax.set_xlabel("n")
     ax.set_ylabel("k")
 
