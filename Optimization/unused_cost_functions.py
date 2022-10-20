@@ -16,9 +16,9 @@ def td_cost(self, freq_index, p):
 
     plt.figure()
     plt.title("Time domain")
-    plt.plot(td_sam_mod[:, 0], td_sam_mod[:, 1], label="Sam. model", color="black")
-    plt.plot(self.ref_data_td[:, 0], self.ref_data_td[:, 1], label="Ref. measurement")
-    plt.plot(self.sam_data_td[:, 0], self.sam_data_td[:, 1], label="Sam. measurement")
+    plt.plot_field(td_sam_mod[:, 0], td_sam_mod[:, 1], label="Sam. model", color="black")
+    plt.plot_field(self.ref_data_td[:, 0], self.ref_data_td[:, 1], label="Ref. measurement")
+    plt.plot_field(self.sam_data_td[:, 0], self.sam_data_td[:, 1], label="Sam. measurement")
     plt.xlabel("Time (ps)")
     plt.ylabel("Amplitude (a.u.)")
     plt.legend()
@@ -79,7 +79,7 @@ def cost_cauchy_relation(self, p, en_plot=False):
     if en_plot:
         plt.figure("Refractive index, cauchy relation")
         plt.title("Refractive index, cauchy relation")
-        plt.plot(self.freqs, n)
+        plt.plot_field(self.freqs, n)
 
         plot(mod_fd, label="model")
         plot(self.sam_data_fd, label="sam")

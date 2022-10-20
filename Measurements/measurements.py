@@ -4,7 +4,7 @@ from datetime import datetime
 from consts import data_dir
 from numpy.fft import fft, fftfreq
 from functions import windowing
-from Plotting.plot_data import plot
+from Plotting.plot_data import plot_field
 
 
 class Measurement:
@@ -76,7 +76,7 @@ class Measurement:
 
         return self._data_td
 
-    def get_data_fd(self, pos_freqs_only=True, reversed_time=False):
+    def get_data_fd(self, pos_freqs_only=True, reversed_time=True):
         if self._data_fd is not None:
             return self._data_fd
         data_td = self.get_data_td()
@@ -172,10 +172,10 @@ if __name__ == '__main__':
     ref0_fd = refs[0].get_data_fd(reversed_time=True)
     sam0_fd = sams[0].get_data_fd(reversed_time=True)
 
-    plot(ref0_fd, label="ref")
-    plot(sam0_fd, label="sample0")
+    plot_field(ref0_fd, label="ref")
+    plot_field(sam0_fd, label="sample0")
     for i in range(1, 10):
         sam_i = sams[i].get_data_fd(reversed_time=True)
-        plot(sam_i, label=f"sample{i}")
+        plot_field(sam_i, label=f"sample{i}")
 
     plt.show()

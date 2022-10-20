@@ -14,13 +14,13 @@ class TeralyzerResult:
 
     def parse_file(self):
         csv_dict = dict(pd.read_csv(self.filepath))
-        corrected_dict = {k.replace(" ", ""): v for k, v in csv_dict.items()}
+        formatted_dict = {k.replace(" ", ""): v for k, v in csv_dict.items()}
 
-        corrected_dict["freq"] /= THz
+        formatted_dict["freq"] /= THz
 
         self.name = self.filepath.stem
 
-        return corrected_dict
+        return formatted_dict
 
     def get_n(self):
         n = self.result_dict["ref_ind"] + 1j * self.result_dict["kappa"]
@@ -53,6 +53,7 @@ def select_results(keywords, case_sensitive=True):
             selected.append(result)
 
     return selected
+
 
 if __name__ == '__main__':
     results = get_all_teralyzer_results()

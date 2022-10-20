@@ -1,8 +1,8 @@
 from imports import *
-from functions import phase_correction, do_ifft
+from functions import phase_correction, do_ifft, calc_absorption
 
 
-def plot(data_fd, label="", color=None):
+def plot_field(data_fd, label="", color=None):
     freqs = data_fd[:, 0]
 
     plt.figure("Wrapped phase")
@@ -27,7 +27,7 @@ def plot(data_fd, label="", color=None):
     plt.ylabel("Amplitude (a.u.)")
     plt.legend()
 
-    data_td = do_ifft(data_fd, hermitian=True)
+    data_td = do_ifft(data_fd)
 
     plt.figure("Time domain")
     plt.title("Time domain")
@@ -50,6 +50,29 @@ def plot(data_fd, label="", color=None):
         plt.xlabel("Frequency (THz)")
         plt.ylabel("Imag(E)")
         plt.legend()
+
+
+def plot_ri(n, label="", color=None):
+    freqs = n[:, 0].real
+
+    plt.figure("Refractive index real")
+    plt.plot(freqs, n[:, 1].real, label=label, color=color)
+    plt.xlabel("Frequency (THz)")
+    plt.xlabel("Refractive index")
+    plt.legend()
+
+    plt.figure("Refractive index imag")
+    plt.plot(freqs, n[:, 1].imag, label=label, color=color)
+    plt.xlabel("Frequency (THz)")
+    plt.xlabel("Extinction coefficient")
+    plt.legend()
+
+    a = calc_absorption(freqs, n[:, 1].imag)
+    plt.figure("Absorption coefficient")
+    plt.plot(freqs, a, label=label, color=color)
+    plt.xlabel("Frequency (THz)")
+    plt.ylabel("Absorption coefficient (1/cm)")
+    plt.legend()
 
 
 if __name__ == '__main__':

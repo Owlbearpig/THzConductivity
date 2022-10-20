@@ -9,9 +9,9 @@ def main():
     d_list = [inf, 500, inf]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
-    new_cost = Cost(d_list, keywords, sam_idx=9)
+    new_cost = Cost(d_list, keywords, sam_idx=5, simulated_sample=False)
     freqs = new_cost.freqs
-    freq = 0.600
+    freq = 0.605
     selected_freq_idx = np.argmin(np.abs(freqs - freq))
     print(f"Selected frequency: {freqs[selected_freq_idx]} (THz), idx: {selected_freq_idx}")
 
@@ -51,7 +51,7 @@ def main():
     p_found = [grd_x[min_x], grd_y[min_y]]
     print(f"Found: {p_found}, fx={cost_func(p_found)}")
 
-    p_goal = [new_cost.n_approx[selected_freq_idx].real, new_cost.n_approx[selected_freq_idx].imag]
+    p_goal = [new_cost.n_approx[selected_freq_idx, 1].real, new_cost.n_approx[selected_freq_idx, 1].imag]
     print(f"Goal: {p_goal}, fx={cost_func(p_goal)}")
 
     cbar = fig.colorbar(img)

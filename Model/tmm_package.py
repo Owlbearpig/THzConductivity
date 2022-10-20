@@ -2,28 +2,37 @@ import numpy as np
 
 from imports import *
 from Measurements.measurements import get_all_measurements, select_measurements
-from Plotting.plot_data import plot
+from Plotting.plot_data import plot_field, plot_ri
 from helpers import is_iterable, get_closest_idx
 from tmm import coh_tmm
 from Results.parse_teralyzer_results import select_results
 from scipy.interpolate import interp1d
 
 
-def tmm_package_wrapper(freqs, d_list, n):
-    # freq should be in THz ("between 0 and 10 THz"), d in um
-    lam = (c0 / freqs) * 10 ** -6  # wl in um
-
-    if (not is_iterable(n)) or (not is_iterable(freqs)):
-        n_list = [1, n, 1]
+def tmm_package_wrapper(d_list, n, add_air_phase=True):
+    # freq should be in THz ("between 0 and 10 THz"), d in um (wl in um)
+    if n.ndim == 1:
+        freqs = n[0].real
+        lam = (c0 / freqs) * 10 ** -6
+        n_list = [1, n[1], 1]
         t_list = array([coh_tmm("s", n_list, d_list, 0, lam)["t"]])
     else:
+        freqs = n[:, 0].real
+        lam = (c0 / freqs) * 10 ** -6
+
         t_list = []
         for i, lambda_vac in enumerate(lam):
-            n_list = [1, n[i], 1]
+            n_list = [1, n[i, 1], 1]
             t_list.append(coh_tmm("s", n_list, d_list, 0, lambda_vac)["t"])
         t_list = array(t_list)
 
-    return t_list
+    t_list = array(t_list)
+    if add_air_phase:
+        omega = 2 * pi * freqs * THz
+        d = d_list[1] * um
+        t_list *= np.exp(-1j * omega * d / c0)
+
+    return array([freqs, t_list]).T
 
 
 def tmm_teralyzer_result(keywords, d_list, ref_fd, en_plot=False):
@@ -39,29 +48,19 @@ def tmm_teralyzer_result(keywords, d_list, ref_fd, en_plot=False):
     freqs = freqs[freq_slice]
 
     n_interpolator = interp1d(n[:, 0].real, n[:, 1], kind="linear")
-    n_interp = n_interpolator(freqs)
+    n_interp = array([freqs, n_interpolator(freqs)]).T
 
     if en_plot:
-        plt.figure("Refractive index real")
-        plt.plot(n[:, 0].real, n[:, 1].real, label="n real teralyzer")
-        plt.plot(freqs, n_interp.real, label="n real interpolated")
-        plt.xlabel("Frequency (THz)")
-        plt.xlabel("Refractive index")
-        plt.legend()
+        plot_ri(n, label="teralyzer")
+        plot_ri(n_interp, label="interpolated")
 
-        plt.figure("Refractive index imag")
-        plt.plot(n[:, 0].real, n[:, 1].imag, label="n imag teralyzer")
-        plt.plot(freqs, n_interp.imag, label="n imag interpolated")
-        plt.xlabel("Frequency (THz)")
-        plt.xlabel("Extinction coefficient")
-        plt.legend()
-
-    t = tmm_package_wrapper(freqs, d_list, n[:, 1])
-    mod_fd = t * ref_fd[freq_slice, 1]
+    t = tmm_package_wrapper(d_list, n_interp)
+    mod_fd = t[:, 1] * ref_fd[freq_slice, 1]
 
     df = np.mean(np.diff(freqs))
     min_freq, max_freq = freqs.min(), freqs.max()
     freqs = np.concatenate((np.arange(0, min_freq, df), freqs, np.arange(max_freq, 10, df)))
+
     leading_0, trailing_0 = np.zeros(len(np.arange(0, min_freq, df))), np.zeros(len(np.arange(max_freq, 10, df)))
     mod_fd = np.concatenate((leading_0, mod_fd, trailing_0))
 
@@ -75,7 +74,6 @@ def main():
     n_real = np.load("n_" + "_".join(keywords) + ".npy")
     n_imag = np.load("k_" + "_".join(keywords) + ".npy")
 
-    # freq_slice = (freqs >= 0.25) * (freqs <= 3.00)
     freq_slice = (freqs >= 0.00) * (freqs <= 10.00)
 
     n_real = n_real[freq_slice]
@@ -85,33 +83,27 @@ def main():
 
     d_list = [inf, 500, inf]
 
-    n = n_real + 1j * n_imag
+    n = array([freqs, n_real + 1j * n_imag]).T
 
-    #n[get_closest_idx(freqs, 0.070)] = 3.00 + 1j*n[get_closest_idx(freqs, 0.070)].imag
-
-    t = tmm_package_wrapper(freqs, d_list, n)
+    t = tmm_package_wrapper(d_list, n)
 
     plt.figure()
-    plt.plot(freqs, np.abs(t) ** 2)
+    plt.plot(freqs, np.abs(t[:, 1]) ** 2)
     plt.xlabel("Frequency (THz)")
     plt.ylabel("Fraction of power transmitted")
     plt.title("Transmission at normal incidence")
 
     measurements = get_all_measurements()
 
-    selected_measurements = select_measurements(measurements, keywords)
+    refs, sams = select_measurements(measurements, keywords)
 
-    refs = [x for x in selected_measurements if x.meas_type == "ref"]
-    sams = [x for x in selected_measurements if x.meas_type == "sam"]
+    ref_fd, sam_fd = refs[0].get_data_fd(), sams[0].get_data_fd()
 
-    ref_fd, sam_fd = refs[0].get_data_fd(reversed_time=True), sams[0].get_data_fd(reversed_time=True)
+    mod_fd = array([freqs, t[:, 1] * ref_fd[:, 1]]).T
 
-    mod_fd = array([freqs, t * ref_fd[:, 1]]).T
-
-    plot(ref_fd, label="Ref. measurement")
-    plot(mod_fd, label="Sam. model")
-    plot(sam_fd, label="Sam. measurement")
-    plt.show()
+    plot_field(ref_fd, label="Ref. measurement")
+    plot_field(mod_fd, label="Sam. model")
+    plot_field(sam_fd, label="Sam. measurement")
 
 
 if __name__ == '__main__':

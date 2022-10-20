@@ -19,7 +19,7 @@ def do_fft(data_td, pos_freqs_only=True):
         return array([freqs, data_fd]).T
 
 
-def do_ifft(data_fd, hermitian=False):
+def do_ifft(data_fd, hermitian=True):
     freqs, y_fd = data_fd[:, 0], data_fd[:, 1]
 
     y_fd = nan_to_num(y_fd)
@@ -28,7 +28,7 @@ def do_ifft(data_fd, hermitian=False):
         y_fd = np.concatenate((y_fd, np.flip(np.conj(y_fd[1:]))))
 
     y_td = ifft(y_fd)
-    t = np.arange(len(y_td)) / (1 * freqs.max())
+    t = np.arange(len(y_td)) / (2 * freqs.max())
     t += 1650
 
     y_td = np.flip(y_td)
@@ -50,7 +50,7 @@ def unwrap(data_fd):
 
 
 def phase_correction(data_fd, fit_range=None, verbose=verbose):
-    freqs = data_fd[:, 0]
+    freqs = data_fd[:, 0].real
 
     phase_unwrapped = unwrap(data_fd)
 
