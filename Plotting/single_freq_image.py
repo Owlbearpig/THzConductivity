@@ -9,9 +9,9 @@ def main():
     d_list = [inf, 500, inf]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
-    new_cost = Cost(d_list, keywords, sam_idx=9, simulated_sample=False)
+    new_cost = Cost(d_list, keywords, sam_idx=8, simulated_sample=False)
     freqs = new_cost.freqs
-    freq = 0.605
+    freq = 1.300
     selected_freq_idx = np.argmin(np.abs(freqs - freq))
     print(f"Selected frequency: {freqs[selected_freq_idx]} (THz), idx: {selected_freq_idx}")
 
@@ -19,7 +19,7 @@ def main():
 
     bounds = [[3.4, 3.9], [0.002, 0.020]]
 
-    rez_x, rez_y = 300, 300
+    rez_x, rez_y = 350, 350
     grd_x = np.linspace(bounds[0][0], bounds[0][1], rez_x)
     grd_y = np.linspace(bounds[1][0], bounds[1][1], rez_y)
 
@@ -41,7 +41,7 @@ def main():
                     cmap=plt.get_cmap("jet"),
                     extent=extent,
                     aspect=aspect)
-    np.save("test", grid_vals)
+
     ax.set_xlabel("n")
     ax.set_ylabel("k")
 

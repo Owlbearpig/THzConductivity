@@ -11,7 +11,10 @@ def is_iterable(obj):
 
 
 def get_closest_idx(arr, val):
-    return np.argmin(np.abs(arr - val))
+    if is_iterable(val):
+        return [np.argmin(np.abs(arr - x)) for x in val]
+    else:
+        return np.argmin(np.abs(arr - val))
 
 
 def most_frequent(List):

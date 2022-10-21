@@ -6,7 +6,6 @@ from functools import partial
 from Model.tmm_package import tmm_package_wrapper
 from helpers import get_closest_idx
 from scipy.optimize import shgo, minimize, basinhopping
-from numba import jit
 
 
 class Cost:
