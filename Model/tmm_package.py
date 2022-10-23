@@ -35,14 +35,7 @@ def tmm_package_wrapper(d_list, n, add_air_phase=True):
     return array([freqs, t_list]).T
 
 
-def tmm_teralyzer_result(keywords, d_list, ref_fd, en_plot=False):
-    # use refractive index from teralyzer to calculate t at ref freqs.
-    #   -> mod_fd = t * ref_fd
-
-    res = select_results(keywords)[0]
-    print("Using refractive index of result: ", res)
-    n = res.get_n()
-
+def tmm_from_ri(n, d_list, ref_fd, en_plot=False):
     freqs = ref_fd[:, 0].real
     freq_slice = (freqs >= n[:, 0].real.min()) * (freqs <= n[:, 0].real.max())
     freqs = freqs[freq_slice]
@@ -51,8 +44,8 @@ def tmm_teralyzer_result(keywords, d_list, ref_fd, en_plot=False):
     n_interp = array([freqs, n_interpolator(freqs)]).T
 
     if en_plot:
-        plot_ri(n, label="teralyzer")
-        plot_ri(n_interp, label="interpolated")
+        plot_ri(n, label="Original data")
+        plot_ri(n_interp, label="Interpolated data")
 
     t = tmm_package_wrapper(d_list, n_interp)
     mod_fd = t[:, 1] * ref_fd[freq_slice, 1]
@@ -65,6 +58,19 @@ def tmm_teralyzer_result(keywords, d_list, ref_fd, en_plot=False):
     mod_fd = np.concatenate((leading_0, mod_fd, trailing_0))
 
     return array([freqs, mod_fd]).T
+
+
+def tmm_teralyzer_result(keywords, d_list, ref_fd):
+    # use refractive index from teralyzer to calculate t at ref freqs.
+    #   -> mod_fd = t * ref_fd
+
+    res = select_results(keywords)[0]
+    print("Using refractive index of result: ", res)
+    n = res.get_n()
+
+    mod_teralyzer = tmm_from_ri(n, d_list, ref_fd, en_plot=False)
+
+    return mod_teralyzer
 
 
 def main():

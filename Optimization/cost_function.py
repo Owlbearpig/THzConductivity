@@ -56,7 +56,7 @@ class Cost:
     def ri_approximation(self):
         avg_ref, avg_sam = get_avg_measurement(self.keywords)
 
-        n_approx = ri_approx(avg_ref.get_data_fd(), avg_sam.get_data_fd(), self.d_list[1] * um)
+        n_approx = ri_approx(avg_ref.get_data_fd(), avg_sam.get_data_fd(), self.d_list[1])
 
         return n_approx
 
@@ -76,7 +76,7 @@ class Cost:
 
         loss = np.abs(amp_loss) + np.abs(phase_loss)
         # print(amp_loss, phase_loss)
-        loss = np.log10(loss)
+        #loss = np.log10(loss)
 
         return loss
 

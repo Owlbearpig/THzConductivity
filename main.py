@@ -17,7 +17,7 @@ def main():
     pp_config = {"sub_offset": True, "en_windowing": True}
     avg_ref, avg_sam = get_avg_measurement(keywords, pp_config=pp_config)
     avg_ref_fd, avg_sam_fd = avg_ref.get_data_fd(), avg_sam.get_data_fd()
-    n = ri_approx(avg_ref_fd, avg_sam_fd, d_list[1] * um)
+    n = ri_approx(avg_ref_fd, avg_sam_fd, d_list[1])
     t = tmm_package_wrapper(d_list, n)
 
     plot_ri(n, label="Ri approximation")
@@ -38,7 +38,7 @@ def main():
     # mod_fd_noise = add_noise(mod_fd, en_plots=True, seed=420)
     # plot(mod_fd_noise, label="mod with noise")
 
-    mod_fd_teralyzer = tmm_teralyzer_result([keywords[-1], "wider500"], d_list, avg_ref_fd, en_plot=True)
+    mod_fd_teralyzer = tmm_teralyzer_result([keywords[-1], "wider500"], d_list, avg_ref_fd)
 
     plot_field(mod_fd_teralyzer, label="model teralyzer", color="red")
 

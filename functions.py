@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
+from scipy.stats import pearsonr
 from imports import *
 from numpy.fft import fft, ifft, fftfreq
 from scipy import signal
@@ -161,3 +161,13 @@ def add_noise(data_fd, enabled=True, scale=0.05, seed=None, en_plots=False):
     data_ret[:, 1] = noisy_data.real + 1j * noisy_data.imag
 
     return data_ret
+
+
+def pearson_corr_coeff(data0_fd, data1_fd):
+    mod_td_y, sam_td_y = do_ifft(data0_fd)[:, 1], do_ifft(data1_fd)[:, 1]
+    corr = pearsonr(mod_td_y.real, sam_td_y.real)
+
+    return max(corr)
+
+def chill():
+    pass

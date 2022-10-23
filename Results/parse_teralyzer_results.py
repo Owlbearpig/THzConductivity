@@ -32,7 +32,7 @@ def get_all_teralyzer_results():
 
     glob = teralyzer_result_dir.glob("**/*")
     for file_path in glob:
-        if file_path.is_file() and ".csv" in file_path.name:
+        if file_path.is_file() and (".csv" in file_path.name):
             try:
                 found_results.append(TeralyzerResult(filepath=file_path))
             except ValueError:

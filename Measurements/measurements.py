@@ -79,6 +79,7 @@ class Measurement:
     def get_data_fd(self, pos_freqs_only=True, reversed_time=True):
         if self._data_fd is not None:
             return self._data_fd
+
         data_td = self.get_data_td()
         t, y = data_td[:, 0], data_td[:, 1]
 
@@ -97,14 +98,14 @@ class Measurement:
         return self._data_fd
 
 
-def get_all_measurements():
+def get_all_measurements(post_process=None):
     measurements = []
 
     glob = data_dir.glob("**/*")
     for file_path in glob:
         if file_path.is_file():
             try:
-                measurements.append(Measurement(filepath=file_path))
+                measurements.append(Measurement(filepath=file_path, post_process_config=post_process))
             except ValueError:
                 print(f"Skipping, not a measurement: {file_path}")
 
@@ -123,8 +124,8 @@ def avg_data(measurements):
     return np.array([t, np.mean(y_arrays, axis=0)]).T
 
 
-def select_measurements(keywords, case_sensitive=True):
-    measurements = get_all_measurements()
+def select_measurements(keywords, case_sensitive=True, post_process=None):
+    measurements = get_all_measurements(post_process=post_process)
 
     if not case_sensitive:
         keywords = [keyword.lower() for keyword in keywords]
@@ -169,13 +170,13 @@ if __name__ == '__main__':
 
     refs, sams = select_measurements(keywords)
 
-    ref0_fd = refs[0].get_data_fd(reversed_time=True)
-    sam0_fd = sams[0].get_data_fd(reversed_time=True)
+    ref0_fd = refs[0].get_data_fd()
+    sam0_fd = sams[0].get_data_fd()
 
     plot_field(ref0_fd, label="ref")
     plot_field(sam0_fd, label="sample0")
     for i in range(1, 10):
-        sam_i = sams[i].get_data_fd(reversed_time=True)
+        sam_i = sams[i].get_data_fd()
         plot_field(sam_i, label=f"sample{i}")
 
     plt.show()

@@ -16,7 +16,7 @@ def main():
 
     avg_ref, avg_sam = get_avg_measurement(keywords)
     avg_ref_fd, avg_sam_fd = avg_ref.get_data_fd(reversed_time=True), avg_sam.get_data_fd(reversed_time=True)
-    n = ri_approx(avg_ref_fd, avg_sam_fd, d_list[1] * um)
+    n = ri_approx(avg_ref_fd, avg_sam_fd, d_list[1])
     t = tmm_package_wrapper(d_list, n)
 
     mod_fd = array([avg_ref_fd[:, 0], t[:, 1] * avg_ref_fd[:, 1]]).T

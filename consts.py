@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from scipy.constants import c as c0
-from numpy import pi
+from numpy import pi, inf
 
 um = 10**-6
 THz = 10 ** 12

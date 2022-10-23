@@ -64,7 +64,7 @@ def plot_ri(n, label="", color=None):
     plt.figure("Refractive index imag")
     plt.plot(freqs, n[:, 1].imag, label=label, color=color)
     plt.xlabel("Frequency (THz)")
-    plt.xlabel("Extinction coefficient")
+    plt.ylabel("Extinction coefficient")
     plt.legend()
 
     a = calc_absorption(freqs, n[:, 1].imag)
