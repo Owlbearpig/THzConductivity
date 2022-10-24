@@ -169,5 +169,21 @@ def pearson_corr_coeff(data0_fd, data1_fd):
 
     return max(corr)
 
+
 def chill():
     pass
+
+
+def zero_pad_fd(data0_fd, data1_fd):
+    # expected data1_fd range: 0, 10 THz.
+    df = np.mean(np.diff(data1_fd[:, 0].real))
+    min_freq, max_freq = data0_fd[:, 0].real.min(), data0_fd[:, 0].real.max()
+    pre_pad, post_pad = np.arange(0, min_freq, df), np.arange(max_freq, 10, df)
+    padded_freqs = np.concatenate((pre_pad,
+                                   data0_fd[:, 0].real,
+                                   post_pad))
+    padded_data = np.concatenate((zeros(len(pre_pad)),
+                                  data0_fd[:, 1],
+                                  zeros(len(post_pad))))
+    return array([padded_freqs, padded_data]).T
+

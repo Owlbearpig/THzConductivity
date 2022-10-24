@@ -32,6 +32,11 @@ def main():
 
     tmm_mod_fd = array([t[:, 0].real, t[:, 1] * ref_fd[:, 1]]).T
 
+    freq_idx_slice = slice(50, 700)
+    ref_fd = ref_fd[freq_idx_slice, :]
+    sam_fd = sam_fd[freq_idx_slice, :]
+    tmm_mod_fd = tmm_mod_fd[freq_idx_slice, :]
+
     plot_field(tmm_mod_fd, label="TMM(n_analytical)", color="black")
     plot_field(ref_fd, label="Avg. Ref. ")
     plot_field(sam_fd, label="Avg. Sam.")

@@ -52,9 +52,10 @@ def tmm_from_ri(n, d_list, ref_fd, en_plot=False):
 
     df = np.mean(np.diff(freqs))
     min_freq, max_freq = freqs.min(), freqs.max()
-    freqs = np.concatenate((np.arange(0, min_freq, df), freqs, np.arange(max_freq, 10, df)))
+    leading_freq_pad, trailing_freq_pad = np.arange(0, min_freq, df), np.arange(max_freq+df, 10, df)
+    freqs = np.concatenate((leading_freq_pad, freqs, trailing_freq_pad))
 
-    leading_0, trailing_0 = np.zeros(len(np.arange(0, min_freq, df))), np.zeros(len(np.arange(max_freq, 10, df)))
+    leading_0, trailing_0 = np.zeros(len(leading_freq_pad)), np.zeros(len(trailing_freq_pad))
     mod_fd = np.concatenate((leading_0, mod_fd, trailing_0))
 
     return array([freqs, mod_fd]).T

@@ -16,7 +16,7 @@ def main():
     d_list = [inf, 500, inf]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
     sample_idx = 3  # if None avg. will be used
-    sim_sample = False
+    sim_sample = True
     file_name = "_".join(keywords) + f"_{sample_idx}_{sim_sample}_half_range" + ".npy"
 
     new_cost = Cost(d_list, keywords, sam_idx=sample_idx, simulated_sample=sim_sample)
