@@ -57,7 +57,7 @@ def main():
     img = ax.imshow(grid_vals[:, :, 0].transpose((1, 0)),
                     vmin=np.min(grid_vals), vmax=np.max(grid_vals),
                     origin="lower",
-                    cmap=plt.get_cmap("binary"),
+                    cmap=plt.get_cmap("jet"),
                     extent=extent,
                     aspect=aspect,
                     )

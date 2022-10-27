@@ -11,14 +11,24 @@ def main():
     d_list = [inf, 500, inf]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
-    new_cost = Cost(d_list, keywords, simulated_sample=False)
+    new_cost = Cost(d_list, keywords, simulated_sample=True)
     freqs = new_cost.freqs
 
-    freq_range = [0.25, 1.6]
+    freq_range = [0.00, 3.50]
     freq_slice = (freq_range[0] < freqs) * (freqs < freq_range[1])
     freqs = freqs[freq_slice]
 
-    bounds = [(3.3, 3.8), (0.001, 0.02)]
+    from helpers import get_closest_idx
+    print("Freq: ", freqs[get_closest_idx(freqs, 0.705)])
+    cost_func = partial(new_cost.cost, float(0.705))
+    p0 = [3.634393, 0.0035676]
+    p1 = [3.637925, 0.0040860] # truth, should have smaller cost, right?
+
+    c0, c1 = cost_func(p0), cost_func(p1)
+    print(f"f(c0) = {c0}, f(c1) = {c1}")
+    exit()
+
+    bounds = [(3.62, 3.68), (0.001, 0.02)]
     # print(get_closest_idx(freqs, 0.614846288427893))
     n = []
     for idx, freq in enumerate(freqs):
@@ -28,7 +38,7 @@ def main():
 
         cost_func = partial(new_cost.cost, float(freq))
 
-        minimizer_kwargs = {"tol": 1e-14, "method": "Nelder-Mead", "bounds": bounds}
+        minimizer_kwargs = {"tol": 1e-14, "bounds": bounds}
         res = shgo(cost_func, bounds=bounds, n=500, iters=5, minimizer_kwargs=minimizer_kwargs)
 
         # res = minimize(cost_func, p0, bounds=bounds)
@@ -46,7 +56,7 @@ def main():
     n_goal = new_cost.n_approx[goal_freq_slice]
 
     plot_ri(n, label="RI fit")
-    plot_ri(n_goal, label="RI approximation")
+    plot_ri(n_goal, label="RI approximation (truth if simulated sam.)")
 
     t = tmm_package_wrapper(d_list, n)
 
