@@ -17,14 +17,14 @@ def main():
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
     sample_idx = 3  # if None avg. will be used
     sim_sample = True
-    file_name = "_".join(keywords) + f"_{sample_idx}_{sim_sample}_half_range" + ".npy"
+    file_name = "_".join(keywords) + f"_{sample_idx}_{sim_sample}_half_range_tight_bounds" + ".npy"
 
     new_cost = Cost(d_list, keywords, sam_idx=sample_idx, simulated_sample=sim_sample)
     freqs = new_cost.freqs
     freq_range = [0.00, 5.00]
     freq_slice = (freq_range[0] <= freqs) * (freqs <= freq_range[1])
 
-    bounds = [[3.4, 3.9], [0.002, 0.020]]
+    bounds = [[3.62, 3.68], [0.001, 0.020]]
 
     rez_x, rez_y, rez_z = 300, 300, sum(freq_slice)
     grd_x = np.linspace(bounds[0][0], bounds[0][1], rez_x)
