@@ -46,7 +46,7 @@ class Cost:
             self.sam_data_td = do_ifft(sam_fd)
 
         if self.en_noise:
-            sam_fd = add_noise(sam_fd, scale=0.005)
+            sam_fd = add_noise(sam_fd, scale=0.05, en_plots=True)
 
         self.sam_phase_unwrapped = phase_correction(sam_fd)
         self.ref_phase_unwrapped = phase_correction(ref_fd)

@@ -130,7 +130,7 @@ def add_noise(data_fd, enabled=True, scale=0.05, seed=None, en_plots=False):
     if not enabled:
         return data_ret
 
-    noise_phase = np.random.normal(0, scale*2, len(data_fd[:, 0]))
+    noise_phase = np.random.normal(0, scale*0, len(data_fd[:, 0]))
     noise_amp = np.random.normal(0, scale*1.5, len(data_fd[:, 0]))
 
     phi, magn = np.angle(data_fd[:, 1]), np.abs(data_fd[:, 1])

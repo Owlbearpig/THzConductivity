@@ -11,37 +11,29 @@ def main():
     d_list = [inf, 500, inf]
     keywords = ["01 GaAs Wafer 25", "2022_02_14"]
 
-    new_cost = Cost(d_list, keywords, simulated_sample=True)
+    new_cost = Cost(d_list, keywords, simulated_sample=True, en_noise=True)
     freqs = new_cost.freqs
 
-    freq_range = [0.00, 3.50]
-    freq_slice = (freq_range[0] < freqs) * (freqs < freq_range[1])
+    freq_range = [0.00, 10.00]
+    freq_slice = (freq_range[0] <= freqs) * (freqs <= freq_range[1])
     freqs = freqs[freq_slice]
-
-    from helpers import get_closest_idx
-    print("Freq: ", freqs[get_closest_idx(freqs, 0.705)])
-    cost_func = partial(new_cost.cost, float(0.705))
-    p0 = [3.634393, 0.0035676]
-    p1 = [3.637925, 0.0040860] # truth, should have smaller cost, right?
-
-    c0, c1 = cost_func(p0), cost_func(p1)
-    print(f"f(c0) = {c0}, f(c1) = {c1}")
-    exit()
 
     bounds = [(3.62, 3.68), (0.001, 0.02)]
     # print(get_closest_idx(freqs, 0.614846288427893))
-    n = []
+    n, freq_evaluated = [], []
     for idx, freq in enumerate(freqs):
-        if idx != 72:
+        if idx > 100:
             pass
         print(f"Optimizing frequency {freq} / {freqs.max()} THz ({idx}/{len(freqs)})")
+        #freq_evaluated.append(freq)
 
         cost_func = partial(new_cost.cost, float(freq))
 
-        minimizer_kwargs = {"tol": 1e-14, "bounds": bounds}
-        res = shgo(cost_func, bounds=bounds, n=500, iters=5, minimizer_kwargs=minimizer_kwargs)
-
-        # res = minimize(cost_func, p0, bounds=bounds)
+        #minimizer_kwargs = {"tol": 1e-14, "bounds": bounds}
+        #res = shgo(cost_func, bounds=bounds, n=500, iters=5, minimizer_kwargs=minimizer_kwargs)
+        n_goal = new_cost.n_approx[idx, 1]
+        p0 = array([n_goal.real, n_goal.imag])
+        res = minimize(cost_func, p0, bounds=bounds)
         """
         minimizer_kwargs = {"bounds": bounds}
         res = basinhopping(cost_func, p0, 100, 1, stepsize=0.005, minimizer_kwargs=minimizer_kwargs, disp=False)
@@ -52,7 +44,7 @@ def main():
 
     n = array([freqs, n]).T
 
-    goal_freq_slice = (freq_range[0] < new_cost.freqs) * (new_cost.freqs < freq_range[1])
+    goal_freq_slice = (freq_range[0] <= new_cost.freqs) * (new_cost.freqs <= freq_range[1])
     n_goal = new_cost.n_approx[goal_freq_slice]
 
     plot_ri(n, label="RI fit")
