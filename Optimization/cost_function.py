@@ -21,6 +21,7 @@ class Cost:
         self.ref_data_td, self.sam_data_td = None, None
         self.freqs = None
         self.sam_phase_unwrapped, self.ref_phase_unwrapped = None, None
+        self.sam_no_noise = None
         self.ref_data_fd, self.sam_data_fd = self.eval_measurement()
 
     def eval_measurement(self):
@@ -45,8 +46,9 @@ class Cost:
             sam_fd[:, 1] = ref_fd[:, 1] * t[:, 1]
             self.sam_data_td = do_ifft(sam_fd)
 
+        self.sam_no_noise = sam_fd.copy()
         if self.en_noise:
-            sam_fd = add_noise(sam_fd, scale=0.05, en_plots=True)
+            sam_fd = add_noise(sam_fd, scale=0.005, en_plots=True)
 
         self.sam_phase_unwrapped = phase_correction(sam_fd)
         self.ref_phase_unwrapped = phase_correction(ref_fd)

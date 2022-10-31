@@ -31,21 +31,25 @@ def main():
     grd_x = np.linspace(bounds[0][0], bounds[0][1], rez_x)
     grd_y = np.linspace(bounds[1][0], bounds[1][1], rez_y)
 
-    grid_vals = np.zeros((rez_x, rez_y))
+    try:
+        grid_vals = np.load(file_name)
+    except FileNotFoundError:
+        grid_vals = np.zeros((rez_x, rez_y))
 
-    minimizer_kwargs = {"maxiter": np.inf, "maxfev": np.inf, "xatol": 1e-15, "fatol": np.inf,
-                        "return_all": False}
+        minimizer_kwargs = {"maxiter": np.inf, "maxfev": np.inf, "xatol": 1e-15, "fatol": np.inf,
+                            "return_all": False}
+        minimizer_kwargs = {}
+        for i in range(rez_x):
+            if i % 10 == 0:
+                print(f"{i} / {rez_x}")
+            for j in range(rez_y):
+                p0 = array([grd_x[i], grd_y[j]])
+                res = minimize(cost_func, p0, method="Nelder-Mead", bounds=bounds, options=minimizer_kwargs)
+                grid_vals[i, j] = res.nit
 
-    for i in range(rez_x):
-        if i % 10 == 0:
-            print(f"{i} / {rez_x}")
-        for j in range(rez_y):
-            p0 = array([grd_x[i], grd_y[j]])
-            res = minimize(cost_func, p0, method="Nelder-Mead", bounds=bounds, options=minimizer_kwargs)
-            grid_vals[i, j] = res.fun
-            # print(res)
+        np.save(file_name, grid_vals)
 
-    np.save(file_name, grid_vals)
+    grid_vals = np.log10(grid_vals)
 
     fig = plt.figure()
     ax = fig.add_subplot(111)

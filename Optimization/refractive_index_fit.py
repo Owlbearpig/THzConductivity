@@ -33,7 +33,7 @@ def main():
         #res = shgo(cost_func, bounds=bounds, n=500, iters=5, minimizer_kwargs=minimizer_kwargs)
         n_goal = new_cost.n_approx[idx, 1]
         p0 = array([n_goal.real, n_goal.imag])
-        res = minimize(cost_func, p0, bounds=bounds)
+        res = minimize(cost_func, p0, bounds=bounds, tol=1e-14)
         """
         minimizer_kwargs = {"bounds": bounds}
         res = basinhopping(cost_func, p0, 100, 1, stepsize=0.005, minimizer_kwargs=minimizer_kwargs, disp=False)
@@ -54,9 +54,12 @@ def main():
 
     mod_fd = array([freqs, new_cost.ref_data_fd[goal_freq_slice, 1] * t[:, 1]]).T
 
+
     plot_field(mod_fd, label="Sam. model", color="black")
     plot_field(new_cost.ref_data_fd, label="Ref. measurement")
+    plot_field(new_cost.sam_no_noise, label="Sam. before adding noise")
     plot_field(new_cost.sam_data_fd, label="Sam. measurement")
+
 
 
 if __name__ == '__main__':
