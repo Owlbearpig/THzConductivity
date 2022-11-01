@@ -173,10 +173,29 @@ if __name__ == '__main__':
     ref0_fd = refs[0].get_data_fd()
     sam0_fd = sams[0].get_data_fd()
 
-    plot_field(ref0_fd, label="ref")
-    plot_field(sam0_fd, label="sample0")
-    for i in range(1, 10):
-        sam_i = sams[i].get_data_fd()
-        plot_field(sam_i, label=f"sample{i}")
+    import datetime
 
+    t0 = refs[0].meas_time
+
+    def unix_time_millis(dt):
+        return (dt - t0).total_seconds() / 60
+
+
+    #plot_field(ref0_fd, label="ref")
+    #plot_field(sam0_fd, label="sample0")
+    freq_idx = 210
+    print(sam0_fd[freq_idx, 0])
+    time, amp = [], []
+    for i in range(0, 10):
+        sam_i = sams[i].get_data_fd()
+        ref_i = refs[i].get_data_fd()
+
+        time.append(unix_time_millis(refs[i].meas_time))
+        #amp.append(np.abs(ref_i[freq_idx, 1]) - np.abs(sam_i[freq_idx, 1]))
+        amp.append(np.abs(sam_i[freq_idx, 1]))
+
+        plot_field(ref_i, label=f"ref {i}")
+        plot_field(sam_i, label=f"sam {i}")
+    plt.figure()
+    plt.plot(time, amp)
     plt.show()
