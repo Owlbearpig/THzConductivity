@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-
+from Model.tinkham_model import calc_sigma
 from imports import *
 from functions import pearson_corr_coeff
 from Measurements.measurements import select_measurements
@@ -10,42 +10,60 @@ from scipy.signal import correlate
 
 
 def main():
-    keywords = ["01 GaAs Wafer 25", "2022_02_14"]
-    d_list = [inf, 500, inf]
-    meas_idx = 3
-
+    keywords_sub = ["GaAs_Wafer_25", "2021_08_09"]
     pp = {"sub_offset": True, "en_windowing": True}
-    ref_measurements_noFP, sam_measurements_noFP = select_measurements(keywords, post_process=pp)
-    ref_fd_noFP = ref_measurements_noFP[meas_idx].get_data_fd()
-    sam_fd_noFP = sam_measurements_noFP[meas_idx].get_data_fd()
+    ref_sub_measurements, sam_sub_measurements = select_measurements(keywords_sub, post_process=pp)
 
-    n = ri_approx(ref_fd_noFP, sam_fd_noFP, d_list[1])
+    keywords_film = ["GaAs_C doped", "2021_08_09"]
+    ref_film_measurements, sam_film_measurements = select_measurements(keywords_film, post_process=pp)
 
-    plot_ri(n, label=f"measurement {meas_idx}")
+    d = [500 * 10 ** -6, 0.7 * 10 ** -6]
 
-    pp = {"sub_offset": True, "en_windowing": False}
-    ref_measurements, sam_measurements = select_measurements(keywords, post_process=pp)
-    ref_fd = ref_measurements[meas_idx].get_data_fd()
-    sam_fd = sam_measurements[meas_idx].get_data_fd()
+    p2p = []
+    for meas_idx in range(10):
+        sam_film_td = sam_film_measurements[meas_idx].get_data_td()
+        p2p.append(np.abs(sam_film_td[:, 1].min()) + np.abs(sam_film_td[:, 1].max()))
 
-    t = tmm_package_wrapper(d_list, n)
+    first_meas = sorted([sam_film_measurements[meas_idx] for meas_idx in range(10)], key=lambda x: x.meas_time)[0]
+    t = [(sam_film_measurements[meas_idx].meas_time - first_meas.meas_time).total_seconds() / 60 for meas_idx in
+         range(10)]
+    plt.figure("P2p sam film")
+    plt.title("P2p sam film")
+    plt.plot(t, p2p)
+    plt.xlabel("Time (min)")
+    plt.ylabel("P2p")
 
-    tmm_mod_fd = array([t[:, 0].real, t[:, 1] * ref_fd[:, 1]]).T
+    plot_field(first_meas.get_data_fd())
 
-    freq_idx_slice = slice(50, 700)
-    ref_fd = ref_fd[freq_idx_slice, :]
-    sam_fd = sam_fd[freq_idx_slice, :]
-    tmm_mod_fd = tmm_mod_fd[freq_idx_slice, :]
+    for meas_idx in range(10):
+        ref_film_fd = ref_film_measurements[meas_idx].get_data_fd()
+        sam_film_fd = sam_film_measurements[meas_idx].get_data_fd()
 
-    plot_field(tmm_mod_fd, label="TMM(n_analytical)", color="black")
-    plot_field(ref_fd, label="Avg. Ref. ")
-    plot_field(sam_fd, label="Avg. Sam.")
+        ref_sub_fd = ref_sub_measurements[meas_idx].get_data_fd()
+        sam_sub_fd = sam_sub_measurements[meas_idx].get_data_fd()
 
-    corr = pearson_corr_coeff(tmm_mod_fd, sam_fd)
+        sigma = calc_sigma(ref_sub_fd, sam_sub_fd, ref_film_fd, sam_film_fd, d)
 
-    print(meas_idx, corr)
+        freq_slice = (0.25 < ref_sub_fd[:, 0]) * (ref_sub_fd[:, 0] < 3.00)
+
+        plt.figure("Sigma real")
+        plt.title("Sigma real")
+        plt.plot(ref_sub_fd[freq_slice, 0], sigma.real[freq_slice] / 100, label=f"Measurement index: {meas_idx}")
+        plt.ylabel("Sigma real ($\Omega^{-1}$ $cm^{-1}$)")
+        plt.xlabel("Frequency (THz)")
+        plt.ylim((-10, 310))
+        plt.legend()
+
+        plt.figure("Sigma imag")
+        plt.title("Sigma imag")
+        plt.plot(ref_sub_fd[freq_slice, 0], sigma.imag[freq_slice] / 100, label=f"Measurement index: {meas_idx}")
+        plt.ylabel("Sigma imag ($\Omega^{-1}$ $cm^{-1}$)")
+        plt.xlabel("Frequency (THz)")
+        # plt.ylim((-110, 110))
+        plt.legend()
 
 
 if __name__ == '__main__':
     main()
+
     plt.show()

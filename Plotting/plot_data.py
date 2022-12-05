@@ -58,7 +58,7 @@ def plot_ri(n, label="", color=None):
     plt.figure("Refractive index real")
     plt.plot(freqs, n[:, 1].real, label=label, color=color)
     plt.xlabel("Frequency (THz)")
-    plt.xlabel("Refractive index")
+    plt.ylabel("Refractive index")
     plt.legend()
 
     plt.figure("Refractive index imag")
